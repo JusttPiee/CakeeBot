@@ -18,7 +18,7 @@ A multifunctional Discord bot written in Ruby with AI interactions, profanity fi
 
 - Modify the embeds if you want to, if not then just leave it there (and I will get credited haha)
 
-## Usage:
+## Usage
 - Run the bot in Terminal ruby cakee.rb or use the included start.bat
 - Use ''!help'' to get started.
 
