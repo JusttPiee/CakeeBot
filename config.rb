@@ -21,3 +21,9 @@ OPENAI_REASONING_EFFORT = 'low'
 OPENAI_FALLBACK_REASONING_EFFORT = 'none'
 # Max tokens per reply, thinking + reply together. Only what is used is billed.
 OPENAI_MAX_COMPLETION_TOKENS = 4000
+
+# AI chat memory per channel: keep at most this many messages, and at most about this many tokens.
+# Whichever limit is reached first wins. Oldest whole turns are removed first.
+# !neuronactivate also loads this many recent channel messages as the starting memory.
+MAX_HISTORY_MESSAGES = 45
+MAX_HISTORY_TOKENS = 5_000

@@ -1,13 +1,8 @@
-require "minitest/autorun"
+require_relative "test_helper"
 require "faraday"
 require "tmpdir"
 require_relative "../config"
 require_relative "../ai_chat"
-
-# log and describe_openai_error normally come from cakee.rb
-LOGS = []
-def log(message) = LOGS << message
-def describe_openai_error(_error) = "fake error"
 
 # Pretends to be OpenAI (no real API call, no cost).
 # Give it a list of answers: the 1st request gets the 1st answer, the 2nd request the 2nd, and so on.

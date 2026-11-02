@@ -5,6 +5,7 @@ require_relative './ai_config' # Load AI channel ID methods
 require_relative './chat_history' # Per-channel AI memory (add, trim)
 require_relative './ai_chat' # Ask OpenAI and send (split) replies
 require_relative './channel_lock' # One lock per channel so messages are handled in order
+require_relative './channel_reader' # Load recent channel messages when AI mode is turned on
 require 'openai' # OpenAI lib from https://github.com/alexrudall/ruby-openai
 require 'dotenv' # Load secrets from a .env file into ENV
 require 'io/console' # Hide secrets while the user types them
@@ -419,7 +420,9 @@ ai_config_path = 'ai_config.txt' # Path to the AI channel ID file
 bot.command(:neuronactivate) do |event| # turn on AI mode
   if event.user.permission?(:administrator)
     save_ai_channel(ai_config_path, event.channel.id) # Save the channel ID to the file
-    bot_state[:histories].delete(event.channel.id) # Start this channel's AI memory fresh
+    with_channel_lock(event.channel.id) do # Start this channel's AI memory from its recent messages
+      bot_state[:histories][event.channel.id] = load_channel_history(event.channel, event.bot.profile.id)
+    end
     event.channel.send_embed do |embed| # Send an embed message to confirm activation of AI mode
       embed.title = "🧠 Neuron Mode Activated"
       embed.description = "Neuron Mode has been **activated** for this channel!"

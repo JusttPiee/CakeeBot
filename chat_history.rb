@@ -2,8 +2,8 @@
 # Each channel has its own history (a list of messages), kept in RAM only, so it resets when the bot restarts.
 # The history is trimmed so every OpenAI request stays small and cheap.
 
-MAX_HISTORY_MESSAGES = 20    # keep at most this many messages per channel
-MAX_HISTORY_TOKENS   = 5_000 # ...and at most about this many tokens
+# The limits (MAX_HISTORY_MESSAGES, MAX_HISTORY_TOKENS) are in config.rb
+require_relative './config'
 
 # A hash of channel_id => history. A new channel gets an empty history automatically.
 def create_history_store
