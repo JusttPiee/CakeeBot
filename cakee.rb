@@ -486,7 +486,7 @@ bot.message do |event| # Message event to handle AI interactions
 
     if answer.nil? || answer.strip.empty?
       remove_last_message(history) # Don't keep a question that never got an answer
-      event.respond("⚠️ My AI brain is unavailable right now. Please try again later.")
+      event.message.reply!("⚠️ My AI brain is unavailable right now. Please try again later.", mention_user: false)
     else
       add_assistant_message(history, answer)
       trim_history(history)

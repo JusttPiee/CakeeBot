@@ -68,6 +68,7 @@ def log_empty_answer(response)
   log "❗ OpenAI returned an empty answer (finish_reason: #{finish_reason}, tokens used: #{used}, of which reasoning: #{reasoning})"
 end
 
+# Every chunk replies to the user's message, without pinging them
 def send_reply(event, answer)
-  split_message(answer).each { |chunk| event.respond(chunk) }
+  split_message(answer).each { |chunk| event.message.reply!(chunk, mention_user: false) }
 end

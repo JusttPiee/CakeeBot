@@ -32,6 +32,25 @@ class FakeClient
   end
 end
 
+# Pretends to be a Discord message event. Records everything the bot sends, and whether it was a reply.
+class FakeEvent
+  attr_reader :sent
+
+  def initialize
+    @sent = []
+  end
+
+  def message = self # event.message.reply! lands here too
+
+  def reply!(text, mention_user:)
+    @sent << { text: text, reply: true, ping: mention_user }
+  end
+
+  def respond(text)
+    @sent << { text: text, reply: false }
+  end
+end
+
 class AiChatTest < Minitest::Test
   def setup
     LOGS.clear
@@ -123,6 +142,24 @@ class AiChatTest < Minitest::Test
     client = FakeClient.new(answers: ["", ""])
     assert_equal "", ask_ai(client, history, "Mochi")
     assert_equal 2, client.requests.length
+  end
+
+  # --- Sending the reply ---
+
+  def test_short_answer_is_one_reply_without_ping
+    event = FakeEvent.new
+    send_reply(event, "Hi Bach!")
+    assert_equal [{ text: "Hi Bach!", reply: true, ping: false }], event.sent
+  end
+
+  def test_every_chunk_of_a_long_answer_is_a_reply_without_ping
+    event = FakeEvent.new
+    send_reply(event, "A line of a long story.\n" * 300) # about 7,200 characters
+    assert event.sent.length > 1
+    event.sent.each do |message|
+      assert message[:reply]
+      refute message[:ping]
+    end
   end
 
   def test_api_error_returns_nil_and_does_not_retry
