@@ -54,7 +54,7 @@ bundle -v
 
 ### 3. Get an OpenAI API key
 
-Create a key at [platform.openai.com/api-keys](https://platform.openai.com/api-keys). AI chat uses the `gpt-4.1-nano` model, which is cheap but **not free**: you need credit on your OpenAI account.
+Create a key at [platform.openai.com/api-keys](https://platform.openai.com/api-keys). AI chat uses the `gpt-6-luna` model by default (change it with `OPENAI_MODEL` in `.env`), which is cheap but **not free**: you need credit on your OpenAI account.
 
 ### 4. Download the code and install dependencies
 
@@ -64,27 +64,36 @@ cd CakeeBot
 bundle install
 ```
 
-(Or on GitHub, click **Code → Download ZIP**, unzip it, open a terminal in that folder and run `bundle install`.)
+(Or on GitHub, click **Code → Download ZIP** and unzip it.)
+
+On Windows you can skip `bundle install`: `start.bat` installs anything missing for you.
 
 ### 5. Run the bot
 
 On Windows, double-click **`start.bat`**. On any system, you can also run:
 
 ```bash
-ruby cakee.rb
+bundle exec ruby cakee.rb
 ```
 
-**The first time**, the bot asks for your keys in the terminal:
+**The first time**, the bot creates `.env` from `.env.example` and asks for your keys in the terminal:
 
 ```
+📄 No .env found, created one from .env.example
 Paste your Discord bot token (input is hidden):
 ✅ Saved DISCORD_BOT_TOKEN to .env
+⏳ Checking DISCORD_BOT_TOKEN with Discord...
+✅ Discord accepted DISCORD_BOT_TOKEN
 Paste your OpenAI API key (input is hidden):
 ✅ Saved OPENAI_API_KEY to .env
-🤖 Cake is alive!
+🧠 AI model: gpt-6-luna (default)
+⏳ Checking OPENAI_API_KEY with OpenAI...
+✅ OpenAI accepted OPENAI_API_KEY
+⏳ Connecting to Discord...
+🤖 Cake is alive! Logged in as Cakee#1234 in 1 server(s)
 ```
 
-Your keys are saved to a `.env` file next to `cakee.rb`, so after that the bot starts with no questions. While you paste, nothing shows on screen. That's normal: it hides the keys.
+(Each line also starts with a timestamp.) While you paste, nothing shows on screen. That's normal: it hides the keys. After that, the bot starts with no questions. If a key is wrong, the bot stops right away and tells you which one.
 
 ### 6. Add the bot to your server
 
@@ -102,15 +111,19 @@ Then type `!help` in your server to get started. 🎉
 
 ## Configuration
 
-All settings live in `.env`. See `.env.example` for a template. You can also set them as normal environment variables, which is handy on servers or with Docker.
+All settings live in `.env`, which the bot creates from `.env.example` on the first run. Every setting is listed there with an explanation: edit `.env` and restart the bot to change one. Don't edit `.env.example`; the bot doesn't read it after the first run.
+
+You can also set them as normal environment variables, which is handy on servers or with Docker. A system environment variable **wins over `.env`**; the bot prints a warning when that happens.
 
 | Variable | Required | Description |
 |---|---|---|
 | `DISCORD_BOT_TOKEN` | Yes | Your Discord bot token |
 | `OPENAI_API_KEY` | Yes | Your OpenAI API key |
+| `OPENAI_MODEL` | No | OpenAI model for AI chat. Default: `gpt-6-luna` |
+| `OPENAI_TEMPERATURE` | No | Reply randomness (e.g. `0.7`). Leave empty if your model only supports the default |
 | `DISCORD_INVITE_URL` | No | A custom link for `!invite`. If empty, the bot builds one automatically |
 
-To change a key, edit `.env` or delete it. The bot will ask again on the next run.
+To change a key, edit it in `.env`, or clear its value (leave `KEY=` empty) and the bot will ask again on the next run.
 
 **Personalize (optional):** you can edit the embeds (titles, colors, footers) in `cakee.rb`. Or leave them as they are, and I get credited haha.
 
@@ -128,12 +141,15 @@ To change a key, edit `.env` or delete it. The bot will ask again on the next ru
 
 | Problem | Fix |
 |---|---|
-| `bundle: command not found` | Run `gem install bundler` |
+| `bundle: command not found` / `Bundler not found` | Run `gem install bundler` |
+| `cannot load such file -- discordrb` | Gems aren't installed. Run `bundle install`, or start the bot with `start.bat` |
 | The bot is online but ignores messages | Turn on **Message Content Intent** (step 2) and restart the bot |
 | The bot closes right away with an intents/connection error | Turn on all three privileged intents (step 2) |
 | `Missing DISCORD_BOT_TOKEN` (no prompt shown) | The bot isn't running in an interactive terminal. Set the variable or create `.env` by hand |
-| The token is rejected (401 Unauthorized) | The token is wrong or was reset. Delete the line from `.env` and run the bot again |
-| AI doesn't reply | Check your OpenAI key and account credit, and look at the terminal for errors |
+| `Discord rejected DISCORD_BOT_TOKEN` | The token is wrong or was reset. Fix it in `.env`, or clear its value and run the bot again |
+| `OpenAI rejected OPENAI_API_KEY` | The key is wrong (OpenAI keys start with `sk-`). Fix it in `.env`, or clear its value and run the bot again |
+| You fixed `.env` but the bot still uses the old key | A system environment variable is overriding `.env` (the bot warns about this). Remove the variable and open a new terminal |
+| AI says "My AI brain is unavailable" | Check the terminal. `model_not_found` means OpenAI retired the model: set a newer one in `OPENAI_MODEL` ([list of retired models](https://platform.openai.com/docs/deprecations)). Otherwise check your account credit |
 | `!help` or `!invite` shows nothing | The bot needs the **Embed Links** permission in that channel |
 
 ---

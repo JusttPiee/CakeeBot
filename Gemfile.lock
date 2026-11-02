@@ -65,9 +65,12 @@ PLATFORMS
   x64-mingw-ucrt
 
 DEPENDENCIES
-  discordrb
-  dotenv
-  ruby-openai
+  discordrb (~> 3.8)
+  dotenv (~> 3.2)
+  ruby-openai (~> 8.3)
+
+RUBY VERSION
+   ruby 3.3.7p123
 
 BUNDLED WITH
    2.5.22

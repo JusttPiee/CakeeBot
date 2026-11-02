@@ -8,18 +8,29 @@ require 'dotenv' # Load secrets from a .env file into ENV
 require 'io/console' # Hide secrets while the user types them
 
 ENV_FILE = File.join(__dir__, '.env') # .env lives next to cakee.rb
+ENV_TEMPLATE = File.join(__dir__, '.env.example') # Template listing every setting, with explanations
 
 # Print a timestamped line to the terminal
 def log(message)
   puts "[#{Time.now.strftime('%Y-%m-%d %H:%M:%S')}] #{message}"
 end
 
+# First run: build .env from .env.example, so every setting (and its explanation) is already in the file
+if File.exist?(ENV_FILE)
+  log "📄 Found .env at #{ENV_FILE}"
+elsif File.exist?(ENV_TEMPLATE)
+  File.write(ENV_FILE, File.read(ENV_TEMPLATE))
+  log "📄 No .env found, created one from .env.example at #{ENV_FILE}"
+else
+  log "📄 No .env or .env.example found (will create .env if a key is missing)"
+end
+
 # Remember which keys were already set by the OS (e.g. Windows environment variables) BEFORE loading .env.
 # Dotenv never overwrites existing variables, so an OS variable silently wins over .env.
 OS_ENV_KEYS = ENV.keys.select { |key| !ENV[key].to_s.strip.empty? }
-DOTENV_VALUES = File.exist?(ENV_FILE) ? Dotenv.parse(ENV_FILE) : {}
-log(File.exist?(ENV_FILE) ? "📄 Found .env at #{ENV_FILE}" : "📄 No .env file found (will create one if a key is missing)")
-Dotenv.load(ENV_FILE) # Does nothing if the file does not exist yet
+# overwrite: true makes parse return what the FILE says; without it, dotenv swaps in values already set in ENV
+DOTENV_VALUES = File.exist?(ENV_FILE) ? Dotenv.parse(ENV_FILE, overwrite: true) : {}
+Dotenv.load(ENV_FILE) # Does nothing if the file does not exist
 
 # Read a required secret. If it is missing, ask for it once in the terminal and save it to .env,
 # so first-time setup is just: run the bot and paste your keys.
@@ -43,10 +54,16 @@ def require_env(name, prompt)
   abort "❗ #{name} cannot be empty." if value.empty?
 
   existing = File.exist?(ENV_FILE) ? File.read(ENV_FILE) : ''
-  needs_newline = !existing.empty? && !existing.end_with?("\n") # Don't glue onto an unfinished last line
-  File.open(ENV_FILE, 'a') do |file|
-    file.puts if needs_newline
-    file.puts "#{name}=#{value}"
+  empty_line = /^#{Regexp.escape(name)}=[ \t]*$/ # e.g. "OPENAI_API_KEY=" copied from .env.example
+  if existing.match?(empty_line)
+    # Fill in the empty line from the template, keeping its comments and position
+    File.write(ENV_FILE, existing.sub(empty_line) { "#{name}=#{value}" })
+  else
+    needs_newline = !existing.empty? && !existing.end_with?("\n") # Don't glue onto an unfinished last line
+    File.open(ENV_FILE, 'a') do |file|
+      file.puts if needs_newline
+      file.puts "#{name}=#{value}"
+    end
   end
   log "✅ Saved #{name} to .env"
   ENV[name] = value
@@ -70,6 +87,12 @@ rescue StandardError => e
 end
 
 client = OpenAI::Client.new(access_token: require_env('OPENAI_API_KEY', 'Paste your OpenAI API key')) # Initialize OpenAI client with API key
+
+# Which AI model to chat with. Change it in .env when OpenAI retires a model, no code edit needed.
+DEFAULT_OPENAI_MODEL = 'gpt-6-luna'
+OPENAI_MODEL = ENV['OPENAI_MODEL'].to_s.strip.empty? ? DEFAULT_OPENAI_MODEL : ENV['OPENAI_MODEL'].strip
+OPENAI_TEMPERATURE = ENV['OPENAI_TEMPERATURE'].to_s.strip.empty? ? nil : Float(ENV['OPENAI_TEMPERATURE'])
+log "🧠 AI model: #{OPENAI_MODEL}#{' (default)' if ENV['OPENAI_MODEL'].to_s.strip.empty?}#{", temperature #{OPENAI_TEMPERATURE}" if OPENAI_TEMPERATURE}"
 
 # Turn an OpenAI/Faraday error into one short line, WITHOUT the request headers (they contain the API key)
 def describe_openai_error(error)
@@ -463,11 +486,10 @@ bot.message do |event| # Message event to handle AI interactions
     response = client.chat( # Send a request to the OpenAI API, client was initialized above.
     #these parameters are used to define the model, messages, max tokens, and temperature for the AI response. (From OpenAI API documentation)
       parameters: {
-        model: "gpt-4.1-nano-2025-04-14", # Specify the model to use
+        model: OPENAI_MODEL, # Model from .env (OPENAI_MODEL), or the default set at the top of the file
         messages: messages, # The messages to send to the AI model, which includes the chat history and the user's message
-        max_tokens: 600, # Limit the response to 300 tokens (16 - 24 sentences) to avoid vaporizing your and my wallet
-        temperature: 0.7 # Set the temperature to 0.7 for a balance between creativity and coherence
-      }
+        max_completion_tokens: 600 # Cap the reply length (newer models use this name instead of max_tokens) to avoid vaporizing your and my wallet
+      }.merge(OPENAI_TEMPERATURE ? { temperature: OPENAI_TEMPERATURE } : {}) # Only send temperature if set in .env; some models only accept the default
     )
   rescue Faraday::Error => e
     # Log one short line (no headers, so the API key never reaches the terminal) and tell the user in Discord
