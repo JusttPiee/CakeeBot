@@ -8,13 +8,32 @@ require 'dotenv' # Load secrets from a .env file into ENV
 require 'io/console' # Hide secrets while the user types them
 
 ENV_FILE = File.join(__dir__, '.env') # .env lives next to cakee.rb
+
+# Print a timestamped line to the terminal
+def log(message)
+  puts "[#{Time.now.strftime('%Y-%m-%d %H:%M:%S')}] #{message}"
+end
+
+# Remember which keys were already set by the OS (e.g. Windows environment variables) BEFORE loading .env.
+# Dotenv never overwrites existing variables, so an OS variable silently wins over .env.
+OS_ENV_KEYS = ENV.keys.select { |key| !ENV[key].to_s.strip.empty? }
+DOTENV_VALUES = File.exist?(ENV_FILE) ? Dotenv.parse(ENV_FILE) : {}
+log(File.exist?(ENV_FILE) ? "📄 Found .env at #{ENV_FILE}" : "📄 No .env file found (will create one if a key is missing)")
 Dotenv.load(ENV_FILE) # Does nothing if the file does not exist yet
 
 # Read a required secret. If it is missing, ask for it once in the terminal and save it to .env,
 # so first-time setup is just: run the bot and paste your keys.
 def require_env(name, prompt)
   value = ENV[name].to_s.strip
-  return value unless value.empty?
+  unless value.empty?
+    if OS_ENV_KEYS.include?(name)
+      log "🔑 #{name}: loaded from system environment variable"
+      log "⚠️ #{name} is also in .env, but the system variable is being used instead" unless DOTENV_VALUES[name].to_s.strip.empty?
+    else
+      log "🔑 #{name}: loaded from .env"
+    end
+    return value
+  end
 
   abort "❗ Missing #{name}. Set it as an environment variable or add #{name}=... to #{ENV_FILE}." unless $stdin.tty?
 
@@ -29,13 +48,49 @@ def require_env(name, prompt)
     file.puts if needs_newline
     file.puts "#{name}=#{value}"
   end
-  puts "✅ Saved #{name} to .env"
+  log "✅ Saved #{name} to .env"
   ENV[name] = value
 end
 
 # Set up the bot and OpenAI client
 bot = Discordrb::Commands::CommandBot.new token: require_env('DISCORD_BOT_TOKEN', 'Paste your Discord bot token'), prefix: '!' # Connect to Discord using the bot token with the command prefix '!'
+
+# Check the Discord token once at startup. If it is wrong, discordrb would only log a vague
+# "websocket closed" message and stop, so ask Discord directly first and give a clear error.
+log "⏳ Checking DISCORD_BOT_TOKEN with Discord..."
+begin
+  Discordrb::API::User.profile(bot.token)
+  log "✅ Discord accepted DISCORD_BOT_TOKEN"
+rescue Discordrb::Errors::CodeError, RestClient::Unauthorized => e
+  # Only treat "401: Unauthorized" as a bad token; anything else is just a warning
+  abort "❗ Discord rejected DISCORD_BOT_TOKEN (invalid token). Fix the DISCORD_BOT_TOKEN line in #{ENV_FILE}, or delete it and run the bot again to re-enter it." if e.message.include?('401')
+  log "⚠️ Could not verify DISCORD_BOT_TOKEN right now (#{e.message}). Trying to connect anyway."
+rescue StandardError => e
+  log "⚠️ Could not verify DISCORD_BOT_TOKEN right now (#{e.class}). Trying to connect anyway."
+end
+
 client = OpenAI::Client.new(access_token: require_env('OPENAI_API_KEY', 'Paste your OpenAI API key')) # Initialize OpenAI client with API key
+
+# Turn an OpenAI/Faraday error into one short line, WITHOUT the request headers (they contain the API key)
+def describe_openai_error(error)
+  response = error.respond_to?(:response) ? error.response : nil
+  status = response.is_a?(Hash) ? response[:status] : nil
+  body = response.is_a?(Hash) ? response[:body] : nil
+  body = (JSON.parse(body) rescue nil) if body.is_a?(String)
+  code = body.is_a?(Hash) ? body.dig('error', 'code') || body.dig('error', 'type') : nil
+  [status && "HTTP #{status}", code, ("(#{error.class})" unless status)].compact.join(' ')
+end
+
+# Check the OpenAI key once at startup, so a bad key fails now instead of on the first chat message
+log "⏳ Checking OPENAI_API_KEY with OpenAI..."
+begin
+  client.models.list
+  log "✅ OpenAI accepted OPENAI_API_KEY"
+rescue Faraday::UnauthorizedError
+  abort "❗ OpenAI rejected OPENAI_API_KEY (invalid key). Fix the OPENAI_API_KEY line in #{ENV_FILE}, or delete it and run the bot again to re-enter it."
+rescue Faraday::Error => e
+  log "⚠️ Could not verify OPENAI_API_KEY right now: #{describe_openai_error(e)}. Starting anyway; AI replies may fail."
+end
 
 
 
@@ -394,7 +449,7 @@ end
 bot.message do |event| # Message event to handle AI interactions
   next if event.message.content.start_with?('!') #skip if prefix detected
   ai_channel_id = load_ai_channel(ai_config_path) # Load the AI channel ID from the file
-  return unless ai_channel_id && ai_channel_id == event.channel.id.to_s # Check if the message is in the AI channel, or if AI mode is activated in the channel
+  next unless ai_channel_id && ai_channel_id == event.channel.id.to_s # Check if the message is in the AI channel, or if AI mode is activated in the channel
   
   prompt = event.message.content.strip # Get the message content
   bot_state[:chat_history] = add_message_to_history(
@@ -404,15 +459,22 @@ bot.message do |event| # Message event to handle AI interactions
   ) # Add the user's message to the chat history
   event.channel.start_typing # The bot starts typing to simulate a response (discordrb feature)
   messages = format_history_for_openai(bot_state[:chat_history]) # Create a formatted history of the chat messages for OpenAI API
-  response = client.chat( # Send a request to the OpenAI API, client was initialized above.
-  #these parameters are used to define the model, messages, max tokens, and temperature for the AI response. (From OpenAI API documentation)
-    parameters: {
-      model: "gpt-4.1-nano-2025-04-14", # Specify the model to use
-      messages: messages, # The messages to send to the AI model, which includes the chat history and the user's message
-      max_tokens: 600, # Limit the response to 300 tokens (16 - 24 sentences) to avoid vaporizing your and my wallet
-      temperature: 0.7 # Set the temperature to 0.7 for a balance between creativity and coherence
-    } 
-  )
+  begin
+    response = client.chat( # Send a request to the OpenAI API, client was initialized above.
+    #these parameters are used to define the model, messages, max tokens, and temperature for the AI response. (From OpenAI API documentation)
+      parameters: {
+        model: "gpt-4.1-nano-2025-04-14", # Specify the model to use
+        messages: messages, # The messages to send to the AI model, which includes the chat history and the user's message
+        max_tokens: 600, # Limit the response to 300 tokens (16 - 24 sentences) to avoid vaporizing your and my wallet
+        temperature: 0.7 # Set the temperature to 0.7 for a balance between creativity and coherence
+      }
+    )
+  rescue Faraday::Error => e
+    # Log one short line (no headers, so the API key never reaches the terminal) and tell the user in Discord
+    log "❗ OpenAI request failed: #{describe_openai_error(e)}"
+    event.respond("⚠️ My AI brain is unavailable right now. Please try again later.")
+    next
+  end
 
   answer = response.dig("choices", 0, "message", "content") # Extract the AI's response from the API response
   #choices: This is a list of possible responses generated by the AI model. (usually only one choice is returned)
@@ -430,6 +492,17 @@ bot.message do |event| # Message event to handle AI interactions
   # Respond with the AI's answer or an error message if the response is nil
 end
 
-puts "🤖 Cake is alive!"
 word_chain_game(bot) #preload the word chain game function
+
+# Only announce we're alive once Discord has actually accepted the token and connected
+bot.ready do |event|
+  log "🤖 Cake is alive! Logged in as #{event.bot.profile.distinct} in #{event.bot.servers.size} server(s)"
+end
+
+bot.disconnected do
+  log "🔌 Disconnected from Discord (it will try to reconnect automatically)"
+end
+
+log "⏳ Connecting to Discord..."
 bot.run
+log "🛑 Bot stopped." # bot.run only returns if Discord closed the connection for good
