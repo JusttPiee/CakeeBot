@@ -6,3 +6,7 @@ ruby '>= 3.3' # Matches the README requirement (Ruby 3.3+)
 gem 'discordrb', '~> 3.8' # Discord bot framework
 gem 'ruby-openai', '~> 8.3' # OpenAI API https://github.com/alexrudall/ruby-openai
 gem 'dotenv', '~> 3.2' # Loads secrets from a local .env file into ENV
+
+group :test do
+  gem 'minitest', '~> 5.20' # Unit tests in test/ (run: bundle exec ruby test/run_all.rb)
+end

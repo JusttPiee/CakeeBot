@@ -25,7 +25,7 @@ A multifunctional Discord bot written in Ruby. It can:
 
 **Word chain rules:** each word must be a real English word, can't be reused, and must start with the last letter of the previous word. The same person can't go twice in a row. After 3 wrong attempts, the game ends and the last player with a valid word wins.
 
-**AI chat:** once an admin runs `!neuronactivate`, every message in that channel (except commands) gets an AI reply. The bot remembers the conversation until AI mode is turned on again. AI chat can only be active in one channel at a time.
+**AI chat:** once an admin runs `!neuronactivate`, every message in that channel (except commands) gets an AI reply. The bot knows who is speaking (by nickname and user ID) and remembers the last 20 messages of the conversation (up to about 5,000 tokens), so API costs stay low. It forgets the conversation when the bot restarts or AI mode is turned on again. Replies longer than Discord's 2000-character limit are split into several messages. AI chat can only be active in one channel at a time.
 
 ---
 
@@ -134,6 +134,15 @@ To change a key, edit it in `.env`, or clear its value (leave `KEY=` empty) and 
 | `.env` | Your secret keys. **Never share or commit this file**; it's already in `.gitignore` |
 | `badwords.txt` | The bad words list, one word per line. You can edit it by hand or with `!badword` |
 | `ai_config.txt` | Created automatically. Remembers which channel has AI chat on |
+| `prompts/personality.txt` | The AI's personality: who it is and what it can do. Edit freely; `{bot_name}` becomes your bot's name. Changes apply on the next message |
+
+### Running tests
+
+The tests don't connect to Discord or OpenAI, so they're free and take about a second:
+
+```bash
+bundle exec ruby test/run_all.rb
+```
 
 ---
 

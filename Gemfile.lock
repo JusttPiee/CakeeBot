@@ -33,6 +33,7 @@ GEM
       logger
       mime-types-data (~> 3.2025, >= 3.2025.0507)
     mime-types-data (3.2026.1027)
+    minitest (5.27.0)
     multipart-post (2.4.1)
     mutex_m (0.3.0)
     net-http (0.10.0)
@@ -67,6 +68,7 @@ PLATFORMS
 DEPENDENCIES
   discordrb (~> 3.8)
   dotenv (~> 3.2)
+  minitest (~> 5.20)
   ruby-openai (~> 8.3)
 
 RUBY VERSION

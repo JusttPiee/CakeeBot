@@ -1,0 +1,23 @@
+# All bot settings in one place.
+# - Settings read with `setting(...)` can be changed in .env (they are listed in .env.example).
+# - Plain constants are developer settings: change them here, in the code.
+# Load this AFTER .env has been loaded (cakee.rb does that).
+
+# Read a setting from .env / the environment, or use the default if it is empty
+def setting(name, default:)
+  value = ENV[name].to_s.strip
+  value.empty? ? default : value
+end
+
+# --- Can be changed in .env ---
+OPENAI_MODEL = setting('OPENAI_MODEL', default: 'gpt-6-luna') # change when OpenAI retires a model
+temperature = setting('OPENAI_TEMPERATURE', default: nil) # e.g. "0.7", or nil = model's default
+OPENAI_TEMPERATURE = temperature ? Float(temperature) : nil
+
+# --- Developer settings ---
+# How much the model thinks before replying: none, low, medium, high, xhigh
+OPENAI_REASONING_EFFORT = 'low'
+# If thinking uses up the whole budget and the reply is empty, retry once with this instead
+OPENAI_FALLBACK_REASONING_EFFORT = 'none'
+# Max tokens per reply, thinking + reply together. Only what is used is billed.
+OPENAI_MAX_COMPLETION_TOKENS = 4000
