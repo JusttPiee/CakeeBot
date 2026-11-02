@@ -4,9 +4,38 @@ require 'json' # Load required gems
 require_relative './ai_config' # Load AI channel ID methods
 require_relative './chat_history' # Load chat history methods
 require 'openai' # OpenAI lib from https://github.com/alexrudall/ruby-openai
+require 'dotenv' # Load secrets from a .env file into ENV
+require 'io/console' # Hide secrets while the user types them
+
+ENV_FILE = File.join(__dir__, '.env') # .env lives next to cakee.rb
+Dotenv.load(ENV_FILE) # Does nothing if the file does not exist yet
+
+# Read a required secret. If it is missing, ask for it once in the terminal and save it to .env,
+# so first-time setup is just: run the bot and paste your keys.
+def require_env(name, prompt)
+  value = ENV[name].to_s.strip
+  return value unless value.empty?
+
+  abort "❗ Missing #{name}. Set it as an environment variable or add #{name}=... to #{ENV_FILE}." unless $stdin.tty?
+
+  print "#{prompt} (input is hidden): "
+  value = $stdin.noecho(&:gets).to_s.strip
+  puts
+  abort "❗ #{name} cannot be empty." if value.empty?
+
+  existing = File.exist?(ENV_FILE) ? File.read(ENV_FILE) : ''
+  needs_newline = !existing.empty? && !existing.end_with?("\n") # Don't glue onto an unfinished last line
+  File.open(ENV_FILE, 'a') do |file|
+    file.puts if needs_newline
+    file.puts "#{name}=#{value}"
+  end
+  puts "✅ Saved #{name} to .env"
+  ENV[name] = value
+end
+
 # Set up the bot and OpenAI client
-bot = Discordrb::Commands::CommandBot.new token: 'YOUR_BOT_TOKEN', prefix: '!' # Connect to Discord using the bot token with the command prefix '!'
-client = OpenAI::Client.new(access_token: "YOUR_OPENAI_KEY") # Initialize OpenAI client with API key
+bot = Discordrb::Commands::CommandBot.new token: require_env('DISCORD_BOT_TOKEN', 'Paste your Discord bot token'), prefix: '!' # Connect to Discord using the bot token with the command prefix '!'
+client = OpenAI::Client.new(access_token: require_env('OPENAI_API_KEY', 'Paste your OpenAI API key')) # Initialize OpenAI client with API key
 
 
 
@@ -44,8 +73,15 @@ bot.command(:help) do |event|
   end
 end
 
+# Permissions requested by the auto-generated invite link (only what the bot actually uses)
+BOT_PERMISSIONS = 1024 +  # View Channels
+                  2048 +  # Send Messages
+                  16384 + # Embed Links (!help, !invite, neuron mode messages)
+                  65536   # Read Message History
+
 bot.command(:invite) do |event| # Command to get the bot invite link
-  invite_url = "YOUR_BOT_INVITE_LINK" # Replace with your bot's invite link
+  invite_url = ENV['DISCORD_INVITE_URL'].to_s.strip # Custom invite link from .env (optional)
+  invite_url = event.bot.invite_url(permission_bits: BOT_PERMISSIONS) if invite_url.empty? # Otherwise let discordrb build one from the bot's client ID
   event.channel.send_embed do |embed|
     embed.title = "🤝 Invite Cake"
     embed.thumbnail = Discordrb::Webhooks::EmbedThumbnail.new(url: event.bot.profile.avatar_url)

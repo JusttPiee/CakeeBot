@@ -1,0 +1,21 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Runtime state written by the bot
+ai_config.txt
+
+# Ruby / Bundler
+.bundle/
+vendor/bundle/
+*.gem
+*.log
+tmp/
+
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
