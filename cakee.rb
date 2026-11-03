@@ -6,6 +6,7 @@ require_relative './chat_history' # Per-channel AI memory (add, trim)
 require_relative './ai_chat' # Ask OpenAI and send (split) replies
 require_relative './channel_lock' # One lock per channel so messages are handled in order
 require_relative './channel_reader' # Load recent channel messages when AI mode is turned on
+require_relative './message_logger' # Save every received message to logs/messages.log
 require 'openai' # OpenAI lib from https://github.com/alexrudall/ruby-openai
 require 'dotenv' # Load secrets from a .env file into ENV
 require 'io/console' # Hide secrets while the user types them
@@ -223,6 +224,10 @@ def contains_bad_word?(message, bad_words) # Check if the message contains any b
     i += 1
   end
   return false # If no bad words are found in the message, return false
+end
+
+bot.message do |event| # Save every message the bot receives (name + user ID) to logs/messages.log
+  log_received_message(event)
 end
 
 bot.message do |event| #checks for bad words in messages (triggers on every message)
