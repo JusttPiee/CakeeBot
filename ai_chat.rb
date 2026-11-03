@@ -29,11 +29,6 @@ def build_system_prompt(bot_name)
   "#{personality}\n\n#{CHAT_RULES}\nToday's date is #{Date.today.strftime('%A, %d %B %Y')}."
 end
 
-# The system prompt goes first and is never stored in the history, so trimming can't remove it
-def build_messages(history, bot_name)
-  [{ role: "system", content: build_system_prompt(bot_name) }] + format_history_for_openai(history)
-end
-
 # Returns the AI's answer, or nil if the request failed.
 # If the model used the whole budget on thinking and the answer is empty, try once more without thinking.
 def ask_ai(client, history, bot_name)
@@ -44,43 +39,54 @@ def ask_ai(client, history, bot_name)
   request_answer(client, history, bot_name, OPENAI_FALLBACK_REASONING_EFFORT)
 end
 
-# Get one answer from OpenAI, letting the AI use tools on the way.
+# Get one answer from OpenAI (Responses API), letting the AI use tools on the way.
 # Returns the answer text ("" if empty), or nil if the request failed.
 #
 # Each round: ask OpenAI. If it answers, we are done. If it asks for tools instead,
-# run them, add the results to the conversation, and ask again.
-# The tool steps only live in `messages` here; the saved history keeps just the question and the final answer.
+# run them, add everything it gave us (its thinking + tool requests) and the tool results
+# to `input`, and ask again. The thinking must go back too, or the AI loses track of its plan.
+# The tool steps only live in `input` here; the saved history keeps just the question and the final answer.
 def request_answer(client, history, bot_name, reasoning_effort)
-  messages = build_messages(history, bot_name)
+  instructions = build_system_prompt(bot_name)
+  input = format_history_for_openai(history)
 
   MAX_TOOL_ROUNDS.times do
-    response = send_chat_request(client, messages, reasoning_effort, tools_allowed: true)
-    message = response.dig("choices", 0, "message") || {}
-    tool_calls = message["tool_calls"].to_a
+    response = send_ai_request(client, instructions, input, reasoning_effort, tools_allowed: true)
+    tool_calls = output_items(response, "function_call")
     return answer_text(response) if tool_calls.empty?
 
-    messages << { role: "assistant", content: message["content"], tool_calls: tool_calls }
-    messages.concat(run_tool_calls(tool_calls))
+    input.concat(response["output"].to_a) # thinking (locked) + tool requests, sent back as they came
+    input.concat(run_tool_calls(tool_calls))
   end
 
   log "⚠️ Used all #{MAX_TOOL_ROUNDS} tool rounds, asking for an answer without more tools"
-  answer_text(send_chat_request(client, messages, reasoning_effort, tools_allowed: false))
+  answer_text(send_ai_request(client, instructions, input, reasoning_effort, tools_allowed: false))
 rescue Faraday::Error => e
   log "❗ OpenAI request failed: #{describe_openai_error(e)}" # no headers, so the API key never reaches the terminal
   nil
 end
 
 # One request to OpenAI. tools_allowed: false means "you must answer now, no more tools".
-def send_chat_request(client, messages, reasoning_effort, tools_allowed:)
+# store: false = OpenAI does not save this conversation. Because of that, it hands us its thinking
+# in a locked (encrypted) form, so we can send it back in the next round.
+def send_ai_request(client, instructions, input, reasoning_effort, tools_allowed:)
   parameters = {
     model: OPENAI_MODEL,
-    messages: messages,
-    max_completion_tokens: OPENAI_MAX_COMPLETION_TOKENS, # thinking + reply together
-    reasoning_effort: reasoning_effort
+    instructions: instructions, # the system prompt, never stored in the history, so trimming can't remove it
+    input: input,
+    max_output_tokens: OPENAI_MAX_OUTPUT_TOKENS, # thinking + reply together
+    reasoning: { effort: reasoning_effort },
+    store: false,
+    include: ["reasoning.encrypted_content"]
   }
   parameters[:temperature] = OPENAI_TEMPERATURE if OPENAI_TEMPERATURE # some models only accept the default
   add_tools(parameters, tools_allowed)
-  client.chat(parameters: parameters)
+  client.responses.create(parameters: parameters)
+end
+
+# The response is a list of items: "reasoning" (thinking), "function_call" (tool request), "message" (reply)
+def output_items(response, type)
+  response["output"].to_a.select { |item| item["type"] == type }
 end
 
 # Tell OpenAI which tools exist. The list is still sent when tools are not allowed,
@@ -93,20 +99,24 @@ def add_tools(parameters, tools_allowed)
   parameters[:tool_choice] = "none" unless tools_allowed
 end
 
-# The reply text from a response ("" if empty, and then the reason is logged)
+# The reply text from a response ("" if empty, and then the reason is logged).
+# A "message" item holds a list of parts; the text parts are joined together.
 def answer_text(response)
-  answer = response.dig("choices", 0, "message", "content").to_s
+  answer = output_items(response, "message").map do |message|
+    message["content"].to_a.map { |part| part["text"].to_s }.join
+  end.join
   log_empty_answer(response) if answer.strip.empty?
   answer
 end
 
-# OpenAI can "succeed" but return no text, e.g. when the model used every token on thinking.
-# Log why, so this never fails silently.
+# OpenAI can "succeed" but return no text, e.g. when the model used every token on thinking
+# (then status is "incomplete" and the reason is "max_output_tokens"). Log why, so this never fails silently.
 def log_empty_answer(response)
-  finish_reason = response.dig("choices", 0, "finish_reason")
-  used = response.dig("usage", "completion_tokens")
-  reasoning = response.dig("usage", "completion_tokens_details", "reasoning_tokens")
-  log "❗ OpenAI returned an empty answer (finish_reason: #{finish_reason}, tokens used: #{used}, of which reasoning: #{reasoning})"
+  status = response["status"]
+  reason = response.dig("incomplete_details", "reason")
+  used = response.dig("usage", "output_tokens")
+  reasoning = response.dig("usage", "output_tokens_details", "reasoning_tokens")
+  log "❗ OpenAI returned an empty answer (status: #{status}, reason: #{reason}, tokens used: #{used}, of which reasoning: #{reasoning})"
 end
 
 # Every chunk replies to the user's message, without pinging them

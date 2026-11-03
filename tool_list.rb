@@ -33,11 +33,11 @@ rescue StandardError => e
   "Error: the #{name} tool failed (#{e.class}). Answer without it."
 end
 
-# OpenAI can ask for several tools at once. Each result is sent back as a "tool" message
-# with the same id, so OpenAI knows which result belongs to which request.
+# OpenAI can ask for several tools at once. Each result is sent back as a "function_call_output"
+# with the same call_id, so OpenAI knows which result belongs to which request.
 def run_tool_calls(tool_calls)
   tool_calls.map do |call|
-    result = run_tool(call.dig("function", "name"), call.dig("function", "arguments"))
-    { role: "tool", tool_call_id: call["id"], content: result }
+    result = run_tool(call["name"], call["arguments"])
+    { type: "function_call_output", call_id: call["call_id"], output: result }
   end
 end

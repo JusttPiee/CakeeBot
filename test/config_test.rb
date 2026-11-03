@@ -26,8 +26,8 @@ class ConfigTest < Minitest::Test
   end
 
   def test_agreed_defaults
-    assert_equal "none", OPENAI_REASONING_EFFORT # gpt-6-luna refuses tools + thinking on chat completions
+    assert_equal "low", OPENAI_REASONING_EFFORT
     assert_equal "none", OPENAI_FALLBACK_REASONING_EFFORT
-    assert_equal 4000, OPENAI_MAX_COMPLETION_TOKENS
+    assert_equal 4000, OPENAI_MAX_OUTPUT_TOKENS
   end
 end

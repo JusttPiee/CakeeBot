@@ -17,13 +17,12 @@ TAVILY_API_KEY = setting('TAVILY_API_KEY', default: nil) # nil = no web_search t
 
 # --- Developer settings ---
 # How much the model thinks before replying: none, low, medium, high, xhigh
-# Must be 'none' while the AI has tools: gpt-6-luna on /v1/chat/completions refuses tools + thinking (HTTP 400).
-# To get thinking back with tools, the bot would need to move to OpenAI's /v1/responses API.
-OPENAI_REASONING_EFFORT = 'none'
+# (The bot uses OpenAI's Responses API, which allows tools + thinking together.)
+OPENAI_REASONING_EFFORT = 'low'
 # If thinking uses up the whole budget and the reply is empty, retry once with this instead
 OPENAI_FALLBACK_REASONING_EFFORT = 'none'
 # Max tokens per reply, thinking + reply together. Only what is used is billed.
-OPENAI_MAX_COMPLETION_TOKENS = 4000
+OPENAI_MAX_OUTPUT_TOKENS = 4000
 
 # AI chat memory per channel: keep at most this many messages, and at most about this many tokens.
 # Whichever limit is reached first wins. Oldest whole turns are removed first.

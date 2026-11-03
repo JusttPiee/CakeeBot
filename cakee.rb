@@ -96,7 +96,7 @@ end
 client = OpenAI::Client.new(access_token: require_env('OPENAI_API_KEY', 'Paste your OpenAI API key')) # Initialize OpenAI client with API key
 
 require_relative './config' # All settings (model, reasoning, token cap...) live in config.rb
-log "🧠 AI model: #{OPENAI_MODEL}, reasoning: #{OPENAI_REASONING_EFFORT}, max tokens: #{OPENAI_MAX_COMPLETION_TOKENS}#{", temperature: #{OPENAI_TEMPERATURE}" if OPENAI_TEMPERATURE}"
+log "🧠 AI model: #{OPENAI_MODEL}, reasoning: #{OPENAI_REASONING_EFFORT}, max tokens: #{OPENAI_MAX_OUTPUT_TOKENS}#{", temperature: #{OPENAI_TEMPERATURE}" if OPENAI_TEMPERATURE}"
 log(TAVILY_API_KEY ? "🔎 Web search: on (Tavily)" : "🔎 Web search: off (add TAVILY_API_KEY to .env to turn it on)")
 
 # Turn an OpenAI/Faraday error into one short line, WITHOUT the request headers (they contain the API key)

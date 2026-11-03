@@ -4,7 +4,7 @@ require "tmpdir"
 require_relative "../config"
 require_relative "../ai_chat"
 
-# Pretends to be OpenAI (no real API call, no cost).
+# Pretends to be OpenAI's Responses API (no real API call, no cost). Used as client.responses.create(...)
 # Give it a list of answers: the 1st request gets the 1st answer, the 2nd request the 2nd, and so on.
 # It remembers every request it received in `requests`.
 class FakeClient
@@ -16,28 +16,37 @@ class FakeClient
     @requests = []
   end
 
-  # An answer can be text, or { tool_calls: [...] } to pretend the AI asked for tools
-  def chat(parameters:)
-    @requests << Marshal.load(Marshal.dump(parameters)) # a copy, so later changes to messages don't show up here
+  def responses = self # client.responses.create lands on create below
+
+  # An answer can be text, or { tool_calls: [...] } to pretend the AI thought and then asked for tools
+  def create(parameters:)
+    @requests << Marshal.load(Marshal.dump(parameters)) # a copy, so later changes to input don't show up here
     raise @error if @error
     answer = @answers[[@requests.length - 1, @answers.length - 1].min] # the last answer repeats
     return tool_call_response(answer[:tool_calls]) if answer.is_a?(Hash)
+    return empty_response if answer == ""
 
-    {
-      "choices" => [{ "message" => { "content" => answer }, "finish_reason" => answer == "" ? "length" : "stop" }],
-      "usage" => { "completion_tokens" => 4000, "completion_tokens_details" => { "reasoning_tokens" => 4000 } }
-    }
+    { "status" => "completed",
+      "output" => [{ "type" => "message", "content" => [{ "type" => "output_text", "text" => answer }] }] }
+  end
+
+  # What OpenAI sends when the model used every token on thinking: no message, status "incomplete"
+  def empty_response
+    { "status" => "incomplete", "incomplete_details" => { "reason" => "max_output_tokens" },
+      "output" => [{ "type" => "reasoning", "encrypted_content" => "locked-thinking" }],
+      "usage" => { "output_tokens" => 4000, "output_tokens_details" => { "reasoning_tokens" => 4000 } } }
   end
 
   def tool_call_response(tool_calls)
-    { "choices" => [{ "message" => { "content" => nil, "tool_calls" => tool_calls }, "finish_reason" => "tool_calls" }] }
+    { "status" => "completed",
+      "output" => [{ "type" => "reasoning", "encrypted_content" => "locked-thinking" }] + tool_calls }
   end
 end
 
 # A tool call that is safe in tests: localhost is blocked, so no real web request is made
-def blocked_page_call(id = "call_1")
-  { "id" => id, "type" => "function",
-    "function" => { "name" => "read_webpage", "arguments" => '{"url":"http://localhost/secret"}' } }
+def blocked_page_call(call_id = "call_1")
+  { "type" => "function_call", "call_id" => call_id, "name" => "read_webpage",
+    "arguments" => '{"url":"http://localhost/secret"}' }
 end
 
 # Pretends to be a Discord message event. Records everything the bot sends, and whether it was a reply.
@@ -68,10 +77,19 @@ class AiChatTest < Minitest::Test
     [{ role: "user", content: "Bach (123): hello" }]
   end
 
-  def test_system_prompt_is_sent_first
-    messages = build_messages(history, "Mochi")
-    assert_equal "system", messages.first[:role]
-    assert_equal "Bach (123): hello", messages.last[:content]
+  def test_system_prompt_goes_in_instructions_and_history_in_input
+    client = FakeClient.new
+    ask_ai(client, history, "Mochi")
+    sent = client.requests.first
+    assert_includes sent[:instructions], "Mochi"
+    assert_equal [{ role: "user", content: "Bach (123): hello" }], sent[:input]
+  end
+
+  def test_conversation_is_not_stored_by_openai
+    client = FakeClient.new
+    ask_ai(client, history, "Mochi")
+    assert_equal false, client.requests.first[:store]
+    assert_includes client.requests.first[:include], "reasoning.encrypted_content"
   end
 
   # --- System prompt / personality ---
@@ -121,8 +139,8 @@ class AiChatTest < Minitest::Test
     ask_ai(client, history, "Mochi")
     sent = client.requests.first
     assert_equal OPENAI_MODEL, sent[:model]
-    assert_equal OPENAI_MAX_COMPLETION_TOKENS, sent[:max_completion_tokens]
-    assert_equal OPENAI_REASONING_EFFORT, sent[:reasoning_effort]
+    assert_equal OPENAI_MAX_OUTPUT_TOKENS, sent[:max_output_tokens]
+    assert_equal({ effort: OPENAI_REASONING_EFFORT }, sent[:reasoning])
   end
 
   def test_normal_answer_makes_only_one_request
@@ -137,13 +155,22 @@ class AiChatTest < Minitest::Test
     client = FakeClient.new(answers: ["", "Here is your story"])
     assert_equal "Here is your story", ask_ai(client, history, "Mochi")
     assert_equal 2, client.requests.length
-    assert_equal OPENAI_FALLBACK_REASONING_EFFORT, client.requests.last[:reasoning_effort]
+    assert_equal({ effort: OPENAI_FALLBACK_REASONING_EFFORT }, client.requests.last[:reasoning])
   end
 
   def test_empty_answer_is_logged_with_the_reason
     ask_ai(FakeClient.new(answers: ["", "ok"]), history, "Mochi")
-    assert_includes LOGS.first, "finish_reason: length"
+    assert_includes LOGS.first, "reason: max_output_tokens"
     assert_includes LOGS.first, "reasoning: 4000"
+  end
+
+  def test_answer_text_joins_every_text_part
+    response = { "output" => [
+      { "type" => "reasoning" },
+      { "type" => "message", "content" => [{ "type" => "output_text", "text" => "Hello " },
+                                           { "type" => "output_text", "text" => "Bach" }] }
+    ] }
+    assert_equal "Hello Bach", answer_text(response)
   end
 
   def test_retries_only_once
@@ -157,7 +184,7 @@ class AiChatTest < Minitest::Test
   def test_tools_are_offered_to_the_ai
     client = FakeClient.new
     ask_ai(client, history, "Mochi")
-    names = client.requests.first[:tools].map { |tool| tool[:function][:name] }
+    names = client.requests.first[:tools].map { |tool| tool[:name] }
     assert_includes names, "read_webpage"
   end
 
@@ -166,10 +193,18 @@ class AiChatTest < Minitest::Test
     assert_equal "That link is blocked, sorry!", ask_ai(client, history, "Mochi")
     assert_equal 2, client.requests.length
 
-    tool_message = client.requests.last[:messages].last
-    assert_equal "tool", tool_message[:role]
-    assert_equal "call_1", tool_message[:tool_call_id] # matches the AI's request
-    assert_includes tool_message[:content], "blocked"
+    tool_result = client.requests.last[:input].last
+    assert_equal "function_call_output", tool_result[:type]
+    assert_equal "call_1", tool_result[:call_id] # matches the AI's request
+    assert_includes tool_result[:output], "blocked"
+  end
+
+  # The "tricky point": the AI's thinking from before the tool call must go back with the tool result
+  def test_thinking_and_tool_request_are_sent_back_too
+    client = FakeClient.new(answers: [{ tool_calls: [blocked_page_call] }, "ok"])
+    ask_ai(client, history, "Mochi")
+    types = client.requests.last[:input].map { |item| item["type"] || item[:type] || item[:role] }
+    assert_equal %w[user reasoning function_call function_call_output], types
   end
 
   def test_tool_steps_are_not_saved_in_the_history

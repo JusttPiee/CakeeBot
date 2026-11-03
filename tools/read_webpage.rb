@@ -11,17 +11,15 @@ MAX_REDIRECTS = 3
 
 READ_WEBPAGE_DEFINITION = {
   type: "function",
-  function: {
-    name: "read_webpage",
-    description: "Open a web page (http or https link) and read its text. Use it when someone shares a link, " \
-                 "or to read a page found with web_search.",
-    parameters: {
-      type: "object",
-      properties: {
-        url: { type: "string", description: "The full link, starting with http:// or https://" }
-      },
-      required: ["url"]
-    }
+  name: "read_webpage",
+  description: "Open a web page (http or https link) and read its text. Use it when someone shares a link, " \
+               "or to read a page found with web_search.",
+  parameters: {
+    type: "object",
+    properties: {
+      url: { type: "string", description: "The full link, starting with http:// or https://" }
+    },
+    required: ["url"]
   }
 }.freeze
 

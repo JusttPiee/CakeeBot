@@ -9,17 +9,15 @@ TAVILY_SEARCH_URL = URI('https://api.tavily.com/search')
 # What the AI sees: the tool's name, when to use it, and what to fill in
 WEB_SEARCH_DEFINITION = {
   type: "function",
-  function: {
-    name: "web_search",
-    description: "Search the web for current or changing information: weather, news, prices, scores, recent events. " \
-                 "Do not use it for things you already know.",
-    parameters: {
-      type: "object",
-      properties: {
-        query: { type: "string", description: "What to search for, e.g. \"weather Hanoi today\"" }
-      },
-      required: ["query"]
-    }
+  name: "web_search",
+  description: "Search the web for current or changing information: weather, news, prices, scores, recent events. " \
+               "Do not use it for things you already know.",
+  parameters: {
+    type: "object",
+    properties: {
+      query: { type: "string", description: "What to search for, e.g. \"weather Hanoi today\"" }
+    },
+    required: ["query"]
   }
 }.freeze
 
