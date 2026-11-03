@@ -1,12 +1,6 @@
 require 'discordrb' # Load Discordrb lib for Discord bot functionality
 require 'net/http' # Load required gems
 require 'json' # Load required gems
-require_relative './ai_config' # Load AI channel ID methods
-require_relative './chat_history' # Per-channel AI memory (add, trim)
-require_relative './ai_chat' # Ask OpenAI and send (split) replies
-require_relative './channel_lock' # One lock per channel so messages are handled in order
-require_relative './channel_reader' # Load recent channel messages when AI mode is turned on
-require_relative './message_logger' # Save every received message to logs/messages.log
 require 'openai' # OpenAI lib from https://github.com/alexrudall/ruby-openai
 require 'dotenv' # Load secrets from a .env file into ENV
 require 'io/console' # Hide secrets while the user types them
@@ -35,6 +29,15 @@ OS_ENV_KEYS = ENV.keys.select { |key| !ENV[key].to_s.strip.empty? }
 # overwrite: true makes parse return what the FILE says; without it, dotenv swaps in values already set in ENV
 DOTENV_VALUES = File.exist?(ENV_FILE) ? Dotenv.parse(ENV_FILE, overwrite: true) : {}
 Dotenv.load(ENV_FILE) # Does nothing if the file does not exist
+
+# Our own files come AFTER .env is loaded: they load config.rb, which reads the settings from ENV.
+# (Loading them earlier made config.rb see an empty .env, so settings like TAVILY_API_KEY were ignored.)
+require_relative './ai_config' # Load AI channel ID methods
+require_relative './chat_history' # Per-channel AI memory (add, trim)
+require_relative './ai_chat' # Ask OpenAI and send (split) replies
+require_relative './channel_lock' # One lock per channel so messages are handled in order
+require_relative './channel_reader' # Load recent channel messages when AI mode is turned on
+require_relative './message_logger' # Save every received message to logs/messages.log
 
 # Read a required secret. If it is missing, ask for it once in the terminal and save it to .env,
 # so first-time setup is just: run the bot and paste your keys.
@@ -94,6 +97,7 @@ client = OpenAI::Client.new(access_token: require_env('OPENAI_API_KEY', 'Paste y
 
 require_relative './config' # All settings (model, reasoning, token cap...) live in config.rb
 log "🧠 AI model: #{OPENAI_MODEL}, reasoning: #{OPENAI_REASONING_EFFORT}, max tokens: #{OPENAI_MAX_COMPLETION_TOKENS}#{", temperature: #{OPENAI_TEMPERATURE}" if OPENAI_TEMPERATURE}"
+log(TAVILY_API_KEY ? "🔎 Web search: on (Tavily)" : "🔎 Web search: off (add TAVILY_API_KEY to .env to turn it on)")
 
 # Turn an OpenAI/Faraday error into one short line, WITHOUT the request headers (they contain the API key)
 def describe_openai_error(error)
@@ -102,7 +106,8 @@ def describe_openai_error(error)
   body = response.is_a?(Hash) ? response[:body] : nil
   body = (JSON.parse(body) rescue nil) if body.is_a?(String)
   code = body.is_a?(Hash) ? body.dig('error', 'code') || body.dig('error', 'type') : nil
-  [status && "HTTP #{status}", code, ("(#{error.class})" unless status)].compact.join(' ')
+  reason = body.is_a?(Hash) && status != 401 ? body.dig('error', 'message') : nil # 401 messages quote part of the key, so skip them
+  [status && "HTTP #{status}", code, reason && "- #{reason}", ("(#{error.class})" unless status)].compact.join(' ')
 end
 
 # Check the OpenAI key once at startup, so a bad key fails now instead of on the first chat message

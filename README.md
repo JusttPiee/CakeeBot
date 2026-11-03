@@ -122,6 +122,7 @@ You can also set them as normal environment variables, which is handy on servers
 | `OPENAI_MODEL` | No | OpenAI model for AI chat. Default: `gpt-6-luna` |
 | `OPENAI_TEMPERATURE` | No | Reply randomness (e.g. `0.7`). Leave empty if your model only supports the default |
 | `DISCORD_INVITE_URL` | No | A custom link for `!invite`. If empty, the bot builds one automatically |
+| `TAVILY_API_KEY` | No | Lets the AI search the web ([tavily.com](https://tavily.com), free plan ~1,000 searches/month). If empty, web search is off |
 
 To change a key, edit it in `.env`, or clear its value (leave `KEY=` empty) and the bot will ask again on the next run.
 

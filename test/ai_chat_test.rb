@@ -16,15 +16,28 @@ class FakeClient
     @requests = []
   end
 
+  # An answer can be text, or { tool_calls: [...] } to pretend the AI asked for tools
   def chat(parameters:)
-    @requests << parameters
+    @requests << Marshal.load(Marshal.dump(parameters)) # a copy, so later changes to messages don't show up here
     raise @error if @error
-    answer = @answers[@requests.length - 1]
+    answer = @answers[[@requests.length - 1, @answers.length - 1].min] # the last answer repeats
+    return tool_call_response(answer[:tool_calls]) if answer.is_a?(Hash)
+
     {
       "choices" => [{ "message" => { "content" => answer }, "finish_reason" => answer == "" ? "length" : "stop" }],
       "usage" => { "completion_tokens" => 4000, "completion_tokens_details" => { "reasoning_tokens" => 4000 } }
     }
   end
+
+  def tool_call_response(tool_calls)
+    { "choices" => [{ "message" => { "content" => nil, "tool_calls" => tool_calls }, "finish_reason" => "tool_calls" }] }
+  end
+end
+
+# A tool call that is safe in tests: localhost is blocked, so no real web request is made
+def blocked_page_call(id = "call_1")
+  { "id" => id, "type" => "function",
+    "function" => { "name" => "read_webpage", "arguments" => '{"url":"http://localhost/secret"}' } }
 end
 
 # Pretends to be a Discord message event. Records everything the bot sends, and whether it was a reply.
@@ -137,6 +150,43 @@ class AiChatTest < Minitest::Test
     client = FakeClient.new(answers: ["", ""])
     assert_equal "", ask_ai(client, history, "Mochi")
     assert_equal 2, client.requests.length
+  end
+
+  # --- Tools ---
+
+  def test_tools_are_offered_to_the_ai
+    client = FakeClient.new
+    ask_ai(client, history, "Mochi")
+    names = client.requests.first[:tools].map { |tool| tool[:function][:name] }
+    assert_includes names, "read_webpage"
+  end
+
+  def test_tool_result_is_sent_back_and_the_ai_then_answers
+    client = FakeClient.new(answers: [{ tool_calls: [blocked_page_call] }, "That link is blocked, sorry!"])
+    assert_equal "That link is blocked, sorry!", ask_ai(client, history, "Mochi")
+    assert_equal 2, client.requests.length
+
+    tool_message = client.requests.last[:messages].last
+    assert_equal "tool", tool_message[:role]
+    assert_equal "call_1", tool_message[:tool_call_id] # matches the AI's request
+    assert_includes tool_message[:content], "blocked"
+  end
+
+  def test_tool_steps_are_not_saved_in_the_history
+    saved = history
+    ask_ai(FakeClient.new(answers: [{ tool_calls: [blocked_page_call] }, "ok"]), saved, "Mochi")
+    assert_equal 1, saved.length
+  end
+
+  def test_stops_asking_for_tools_after_the_round_limit
+    client = FakeClient.new(answers: [{ tool_calls: [blocked_page_call] }]) # always wants a tool
+    ask_ai(client, history, "Mochi")
+    last_request = client.requests[MAX_TOOL_ROUNDS] # rounds + 1 final "answer now" request
+    assert_equal "none", last_request[:tool_choice]
+  end
+
+  def test_today_is_in_the_system_prompt
+    assert_includes build_system_prompt("Mochi"), Date.today.year.to_s
   end
 
   # --- Sending the reply ---

@@ -13,10 +13,13 @@ end
 OPENAI_MODEL = setting('OPENAI_MODEL', default: 'gpt-6-luna') # change when OpenAI retires a model
 temperature = setting('OPENAI_TEMPERATURE', default: nil) # e.g. "0.7", or nil = model's default
 OPENAI_TEMPERATURE = temperature ? Float(temperature) : nil
+TAVILY_API_KEY = setting('TAVILY_API_KEY', default: nil) # nil = no web_search tool
 
 # --- Developer settings ---
 # How much the model thinks before replying: none, low, medium, high, xhigh
-OPENAI_REASONING_EFFORT = 'low'
+# Must be 'none' while the AI has tools: gpt-6-luna on /v1/chat/completions refuses tools + thinking (HTTP 400).
+# To get thinking back with tools, the bot would need to move to OpenAI's /v1/responses API.
+OPENAI_REASONING_EFFORT = 'none'
 # If thinking uses up the whole budget and the reply is empty, retry once with this instead
 OPENAI_FALLBACK_REASONING_EFFORT = 'none'
 # Max tokens per reply, thinking + reply together. Only what is used is billed.
@@ -27,3 +30,9 @@ OPENAI_MAX_COMPLETION_TOKENS = 4000
 # !neuronactivate also loads this many recent channel messages as the starting memory.
 MAX_HISTORY_MESSAGES = 45
 MAX_HISTORY_TOKENS = 5_000
+
+# Tools (web search, reading pages). One "round" = the AI asks for tools, we run them, send results back.
+# After this many rounds the AI must answer, so it can never loop forever.
+MAX_TOOL_ROUNDS = 3
+SEARCH_MAX_RESULTS = 5 # results per web_search
+WEBPAGE_MAX_CHARS = 8_000 # read_webpage gives the AI at most this much text (about 2,000 tokens)
