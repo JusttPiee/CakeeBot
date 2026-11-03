@@ -3,10 +3,10 @@ require_relative "../channel_reader"
 
 # Pretend Discord messages and authors (only the fields the reader uses)
 FakeAuthor  = Struct.new(:id, :display_name)
-FakeMessage = Struct.new(:author, :content, :creation_time)
+FakeMessage = Struct.new(:author, :content, :creation_time, :id)
 
 # Pretend channel: history(n) returns the newest n messages, newest first, like Discord
-FakeServer = Struct.new(:name)
+FakeServer = Struct.new(:name, :id)
 
 class FakeChannel
   attr_reader :name, :id, :server
@@ -16,7 +16,7 @@ class FakeChannel
     @error = error
     @name = "general"
     @id = id
-    @server = FakeServer.new("Test Server")
+    @server = FakeServer.new("Test Server", 1)
   end
 
   def history(amount)
@@ -43,6 +43,7 @@ end
 class ChannelReaderTest < Minitest::Test
   def setup
     LOGS.clear
+    clear_test_memory
   end
 
   BOT_ID = 999
@@ -60,7 +61,7 @@ class ChannelReaderTest < Minitest::Test
   def test_bot_messages_become_assistant_messages
     channel = FakeChannel.new([say(PIEE, "hi"), say(BOT, "hello Piee")])
     history = load_channel_history(channel, BOT_ID)
-    assert_equal({ role: "assistant", content: "hello Piee" }, history.last)
+    assert_equal({ role: "assistant", content: "hello Piee" }, history.last.slice(:role, :content))
   end
 
   def test_other_people_get_the_name_and_id_prefix
@@ -104,6 +105,13 @@ class ChannelReaderTest < Minitest::Test
     assert_equal [], load_channel_history(channel, BOT_ID)
   end
 
+  def test_messages_up_to_after_id_are_skipped
+    channel = FakeChannel.new([FakeMessage.new(PIEE, "old", Time.now, 10), FakeMessage.new(PIEE, "new", Time.now, 11)])
+    history = load_channel_history(channel, BOT_ID, after_id: 10)
+    assert_equal ["Piee (123): new"], history.map { |m| m[:content] }
+    assert_equal 11, history.first[:message_id]
+  end
+
   # --- Remembering after a restart ---
 
   def test_startup_loads_the_saved_ai_channel
@@ -140,5 +148,27 @@ class ChannelReaderTest < Minitest::Test
   def test_startup_when_discord_refuses_does_not_crash
     restore_ai_memory(FakeBot.new(error: RuntimeError.new("Missing Access")), create_history_store, ["555"])
     assert_includes LOGS.last, "Could not open AI channel"
+  end
+
+  # --- Channel summary + restart ---
+
+  def test_restart_skips_messages_already_in_the_summary
+    write_channel_summary(1, 555, "earlier stuff", 10)
+    channel = FakeChannel.new([FakeMessage.new(PIEE, "old", Time.now, 10), FakeMessage.new(PIEE, "new", Time.now, 11)])
+    histories = create_history_store
+    restore_ai_memory(FakeBot.new({ 555 => channel }), histories, ["555"])
+    assert_equal ["Piee (123): new"], histories[555].map { |m| m[:content] }
+  end
+
+  def test_restart_without_summary_loads_everything
+    channel = FakeChannel.new([FakeMessage.new(PIEE, "a", Time.now, 1), FakeMessage.new(PIEE, "b", Time.now, 2)])
+    assert_equal 2, load_ai_channel_history(channel, BOT_ID).length
+  end
+
+  def test_ai_channel_keeps_more_than_the_high_mark_until_compaction
+    messages = 10.times.map { |i| FakeMessage.new(PIEE, "a" * 2_400, Time.now, i + 1) } # about 600 tokens each
+    history = load_ai_channel_history(FakeChannel.new(messages), BOT_ID)
+    assert estimate_tokens(history) > MAX_HISTORY_TOKENS
+    assert estimate_tokens(history) <= HARD_MAX_HISTORY_TOKENS
   end
 end

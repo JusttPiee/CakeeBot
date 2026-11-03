@@ -91,23 +91,56 @@ class ChatHistoryTest < Minitest::Test
   end
 
   def test_format_for_openai_keeps_role_and_content
-    history = make_history(1)
-    assert_equal [{ role: "user", content: "[just now] Bach (123): hi 0" }, { role: "assistant", content: "reply 0" }],
+    history = []
+    add_user_message(history, "Bach", 123, "hi", Time.new(2026, 11, 4, 14, 2, 30))
+    add_assistant_message(history, "reply")
+    assert_equal [{ role: "user", content: "[2026-11-04 14:02] Bach (123): hi" }, { role: "assistant", content: "reply" }],
                  format_history_for_openai(history)
   end
 
-  def test_old_user_messages_get_a_time_marker
-    now = Time.new(2026, 11, 3, 12, 0, 0)
+  def test_timestamp_does_not_change_between_requests
     history = []
-    add_user_message(history, "Bach", 123, "I'm hungry", now - (3 * 24 * 3600))
+    add_user_message(history, "Bach", 123, "I'm hungry", Time.new(2026, 11, 1, 9, 5, 0))
+    assert_equal format_history_for_openai(history), format_history_for_openai(history)
+  end
+
+  def test_utc_times_are_shown_in_local_time
+    sent_at = Time.new(2026, 11, 4, 14, 2, 0)
+    history = []
+    add_user_message(history, "Bach", 123, "hi", sent_at.getutc) # Discord gives UTC times
+    assert_equal "[#{sent_at.strftime('%Y-%m-%d %H:%M')}] Bach (123): hi", format_history_for_openai(history).first[:content]
+  end
+
+  def test_bot_messages_get_no_timestamp
+    history = []
+    add_user_message(history, "Bach", 123, "hi")
     add_assistant_message(history, "Try pho!")
-    sent = format_history_for_openai(history, now)
-    assert_equal "[3 days ago] Bach (123): I'm hungry", sent.first[:content]
-    assert_equal "Try pho!", sent.last[:content] # Cake's own messages get no marker
+    assert_equal "Try pho!", format_history_for_openai(history).last[:content]
   end
 
   def test_messages_without_a_time_get_no_marker
     history = [{ role: "user", content: "Bach (123): hi" }]
     assert_equal "Bach (123): hi", format_history_for_openai(history).first[:content]
+  end
+
+  def test_entries_keep_discord_ids_but_openai_does_not_see_them
+    history = []
+    add_user_message(history, "Bach", 123, "hi", Time.now, message_id: 50)
+    add_assistant_message(history, "yo", message_id: 51)
+    assert_equal [50, 51], history.map { |m| m[:message_id] }
+    assert_equal "123", history.first[:user_id]
+    assert_equal "Bach", history.first[:name]
+    assert_equal %i[role content], format_history_for_openai(history).first.keys
+  end
+
+  def test_last_message_id_skips_missing_ids
+    assert_equal 50, last_message_id([{ message_id: 50 }, { message_id: nil }])
+    assert_nil last_message_id([{ message_id: nil }])
+  end
+
+  def test_trim_to_custom_limits
+    history = make_history(30) # 60 messages
+    trim_history(history, 10, 100_000)
+    assert history.length <= 10
   end
 end

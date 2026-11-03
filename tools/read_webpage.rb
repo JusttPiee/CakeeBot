@@ -24,7 +24,7 @@ READ_WEBPAGE_DEFINITION = {
 }.freeze
 
 # Returns the page text (cut to WEBPAGE_MAX_CHARS), or an error message for the AI
-def run_read_webpage(arguments)
+def run_read_webpage(arguments, _context = {})
   url = arguments["url"].to_s.strip
   log "🌐 read_webpage: #{url}"
   response = fetch_page(url)

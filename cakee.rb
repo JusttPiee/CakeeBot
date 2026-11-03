@@ -39,6 +39,7 @@ require_relative './channel_lock' # One lock per channel so messages are handled
 require_relative './channel_reader' # Load recent channel messages when AI mode is turned on
 require_relative './message_logger' # Save every received message to logs/messages.log
 require_relative './mention_chat' # Answer when @mentioned in any channel
+require_relative './ai_channel_chat' # Answer in AI channels, with long-term memory and compaction
 
 # Read a required secret. If it is missing, ask for it once in the terminal and save it to .env,
 # so first-time setup is just: run the bot and paste your keys.
@@ -432,7 +433,7 @@ bot.command(:neuronactivate) do |event| # turn on AI mode
     add_ai_channel(ai_config_path, event.channel.id) # Add this channel to the saved list (other AI channels stay on)
     log "🧠 AI mode turned on in #{describe_message_place(event)}"
     with_channel_lock(event.channel.id) do # Start this channel's AI memory from its recent messages
-      bot_state[:histories][event.channel.id] = load_channel_history(event.channel, event.bot.profile.id)
+      bot_state[:histories][event.channel.id] = load_ai_channel_history(event.channel, event.bot.profile.id)
     end
     event.channel.send_embed do |embed| # Send an embed message to confirm activation of AI mode
       embed.title = "🧠 Neuron Mode Activated"
@@ -487,25 +488,8 @@ bot.message do |event| # Message event to handle AI interactions
   next if event.message.content.start_with?('!') #skip if prefix detected
   next unless ai_channel?(ai_config_path, event.channel.id) # Only answer every message in AI channels
 
-  prompt = event.message.content.strip # Get the message content
-
   with_channel_lock(event.channel.id) do # Handle this channel's messages one at a time
-    history = bot_state[:histories][event.channel.id]
-    add_user_message(history, event.author.display_name, event.author.id, prompt)
-    trim_history(history) # Trim BEFORE sending, so the request stays small
-
-    event.channel.start_typing # Show "Cakee is typing..." while waiting for OpenAI
-    bot_name = event.server.bot.display_name # the name the server sees (nickname, or the bot's username)
-    answer = ask_ai(client, history, bot_name)
-
-    if answer.nil? || answer.strip.empty?
-      remove_last_message(history) # Don't keep a question that never got an answer
-      event.message.reply!("⚠️ My AI brain is unavailable right now. Please try again later.", mention_user: false)
-    else
-      add_assistant_message(history, answer)
-      trim_history(history)
-      send_reply(event, answer) # Splits replies over Discord's 2000-character limit
-    end
+    answer_ai_channel_message(event, client, bot_state[:histories][event.channel.id]) # see ai_channel_chat.rb
   end
 end
 

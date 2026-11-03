@@ -30,6 +30,26 @@ OPENAI_MAX_OUTPUT_TOKENS = 4000
 MAX_HISTORY_MESSAGES = 45
 MAX_HISTORY_TOKENS = 5_000
 
+# --- Long-term memory (see docs/superpowers/specs/2026-11-04-long-term-memory-design.md) ---
+# Where memory files live: memory/<server_id>/... (ignored by git). Tests point this at a temp folder.
+MEMORY_DIR = ENV['CAKE_TEST_MEMORY_DIR'] || File.join(__dir__, 'memory')
+
+# Compaction: when the history goes over MAX_HISTORY_MESSAGES / MAX_HISTORY_TOKENS (the "high mark"),
+# the oldest turns are summarized in one request and the history is cut down to this "low mark".
+COMPACT_TARGET_MESSAGES = 20
+COMPACT_TARGET_TOKENS = 2_500
+COMPACTION_REASONING_EFFORT = 'low'
+
+# Safety net: if compaction keeps failing (OpenAI down), the history may grow up to here,
+# then the oldest turns are cut without a summary, so costs can't run away. About 1.5x the high mark.
+HARD_MAX_HISTORY_MESSAGES = 68
+HARD_MAX_HISTORY_TOKENS = 7_500
+
+# Temporary guard until real size limits are designed: memory text put into the prompt is cut here
+MEMORY_PROMPT_MAX_CHARS = 8_000
+# Longest fact remember_about_me accepts
+REMEMBER_FACT_MAX_CHARS = 500
+
 # Tools (web search, reading pages). One "round" = the AI asks for tools, we run them, send results back.
 # After this many rounds the AI must answer, so it can never loop forever.
 MAX_TOOL_ROUNDS = 7

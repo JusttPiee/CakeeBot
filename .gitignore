@@ -5,6 +5,7 @@
 
 # Runtime state written by the bot
 ai_config.txt
+memory/
 
 # Ruby / Bundler
 .bundle/
@@ -19,3 +20,6 @@ tmp/
 *.swp
 .DS_Store
 Thumbs.db
+
+# Design docs and plans (local only)
+docs/superpowers/

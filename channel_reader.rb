@@ -3,6 +3,7 @@
 # After that, the history just grows and trims as usual.
 require_relative './chat_history'
 require_relative './channel_lock'
+require_relative './channel_summary'
 
 # On startup: for every channel where AI mode was on (saved in ai_config.txt), load its
 # recent messages again, so the AI remembers the conversations from before the restart.
@@ -20,7 +21,7 @@ def restore_channel_memory(bot, histories, channel_id)
   return if channel.nil?
 
   with_channel_lock(channel.id) do
-    histories[channel.id] = load_channel_history(channel, bot.profile.id)
+    histories[channel.id] = load_ai_channel_history(channel, bot.profile.id)
   end
   log "🧠 AI mode is on in #{channel.server&.name} ##{channel.name}: loaded #{histories[channel.id].length} messages into memory"
 end
@@ -35,29 +36,49 @@ rescue StandardError => e
   nil
 end
 
+# History for an AI channel (on startup and on !neuronactivate):
+# only the messages that are not already in the channel summary, kept up to the hard ceiling,
+# so compaction can still summarize them on the next reply instead of them being cut.
+def load_ai_channel_history(channel, bot_id)
+  summary = read_channel_summary(channel.server.id, channel.id)
+  load_channel_history(channel, bot_id, after_id: summary[:last_message_id],
+                                        max_messages: HARD_MAX_HISTORY_MESSAGES, max_tokens: HARD_MAX_HISTORY_TOKENS)
+end
+
 # Fetch the last MAX_HISTORY_MESSAGES messages from Discord and turn them into chat history.
+# after_id: skip messages up to this Discord id (they are already in the channel summary).
+# max_messages / max_tokens: how much to keep (AI channels keep more, compaction shrinks it later).
 # If Discord refuses (e.g. no "Read Message History" permission), log it and start with an empty history.
-def load_channel_history(channel, bot_id)
+def load_channel_history(channel, bot_id, after_id: nil, max_messages: MAX_HISTORY_MESSAGES, max_tokens: MAX_HISTORY_TOKENS)
   messages = channel.history(MAX_HISTORY_MESSAGES)
-  build_history_from_messages(messages, bot_id)
+  messages = messages_after(messages, after_id)
+  build_history_from_messages(messages, bot_id, max_messages: max_messages, max_tokens: max_tokens)
 rescue StandardError => e
   log "⚠️ Could not read recent messages in ##{channel.name} (#{e.class}). Starting with empty memory."
   []
 end
 
+# Only the messages newer than after_id (Discord ids grow over time). Messages without an id are kept.
+def messages_after(messages, after_id)
+  return messages if after_id.nil?
+
+  messages.select { |message| message.id.nil? || message.id > after_id }
+end
+
 # messages: Discord messages, newest first (the order Discord returns them in)
-def build_history_from_messages(messages, bot_id)
+def build_history_from_messages(messages, bot_id, max_messages: MAX_HISTORY_MESSAGES, max_tokens: MAX_HISTORY_TOKENS)
   history = []
   messages.reverse.each do |message| # oldest first, like a normal conversation
     text = message.content.to_s.strip
     next if text.empty? # pictures, stickers or embeds only: no text to give the AI
 
     if message.author.id == bot_id
-      add_assistant_message(history, text)
+      add_assistant_message(history, text, message_id: message.id)
     else
-      add_user_message(history, message.author.display_name, message.author.id, text, message.creation_time)
+      add_user_message(history, message.author.display_name, message.author.id, text, message.creation_time,
+                       message_id: message.id)
     end
   end
-  trim_history(history) # the token limit still applies
+  trim_history(history, max_messages, max_tokens) # the size limits still apply
   history
 end

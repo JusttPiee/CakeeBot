@@ -4,45 +4,6 @@ require "tmpdir"
 require_relative "../config"
 require_relative "../ai_chat"
 
-# Pretends to be OpenAI's Responses API (no real API call, no cost). Used as client.responses.create(...)
-# Give it a list of answers: the 1st request gets the 1st answer, the 2nd request the 2nd, and so on.
-# It remembers every request it received in `requests`.
-class FakeClient
-  attr_reader :requests
-
-  def initialize(answers: ["Hi Bach!"], error: nil)
-    @answers = answers
-    @error = error
-    @requests = []
-  end
-
-  def responses = self # client.responses.create lands on create below
-
-  # An answer can be text, or { tool_calls: [...] } to pretend the AI thought and then asked for tools
-  def create(parameters:)
-    @requests << Marshal.load(Marshal.dump(parameters)) # a copy, so later changes to input don't show up here
-    raise @error if @error
-    answer = @answers[[@requests.length - 1, @answers.length - 1].min] # the last answer repeats
-    return tool_call_response(answer[:tool_calls]) if answer.is_a?(Hash)
-    return empty_response if answer == ""
-
-    { "status" => "completed",
-      "output" => [{ "type" => "message", "content" => [{ "type" => "output_text", "text" => answer }] }] }
-  end
-
-  # What OpenAI sends when the model used every token on thinking: no message, status "incomplete"
-  def empty_response
-    { "status" => "incomplete", "incomplete_details" => { "reason" => "max_output_tokens" },
-      "output" => [{ "type" => "reasoning", "encrypted_content" => "locked-thinking" }],
-      "usage" => { "output_tokens" => 4000, "output_tokens_details" => { "reasoning_tokens" => 4000 } } }
-  end
-
-  def tool_call_response(tool_calls)
-    { "status" => "completed",
-      "output" => [{ "type" => "reasoning", "encrypted_content" => "locked-thinking" }] + tool_calls }
-  end
-end
-
 # A tool call that is safe in tests: localhost is blocked, so no real web request is made
 def blocked_page_call(call_id = "call_1")
   { "type" => "function_call", "call_id" => call_id, "name" => "read_webpage",
@@ -59,8 +20,10 @@ class FakeEvent
 
   def message = self # event.message.reply! lands here too
 
+  # Returns a pretend Discord message, like discordrb does. Its id is how many messages were sent so far.
   def reply!(text, mention_user:)
     @sent << { text: text, reply: true, ping: mention_user }
+    Struct.new(:id).new(@sent.length)
   end
 
   def respond(text)
@@ -246,5 +209,70 @@ class AiChatTest < Minitest::Test
     client = FakeClient.new(error: Faraday::ServerError.new("boom"))
     assert_nil ask_ai(client, history, "Mochi")
     assert_equal 1, client.requests.length
+  end
+
+  def test_send_reply_returns_the_last_sent_message
+    assert_equal 1, send_reply(FakeEvent.new, "Hi Bach!").id
+    assert_equal 2, send_reply(FakeEvent.new, "A line of a long story.
+" * 120).id # two chunks
+  end
+
+  # --- Long-term memory in the prompt ---
+
+  CONTEXT = { server_id: 1, requester_id: 123, requester_name: "Bach", channel_id: 555 }.freeze
+
+  def test_memory_and_summary_go_into_instructions_in_order
+    clear_test_memory
+    write_user_personality(1, 123, "Bach", "x", "likes Valorant")
+    write_channel_summary(1, 555, "We talked about pho.", 9)
+    client = FakeClient.new
+    ask_ai(client, history, "Mochi", CONTEXT)
+    text = client.requests.first[:instructions]
+    assert text.index("Today's date") < text.index("Bach (123): likes Valorant")
+    assert text.index("likes Valorant") < text.index("We talked about pho.")
+  end
+
+  def test_mention_mode_gets_index_but_no_summary
+    clear_test_memory
+    write_user_personality(1, 123, "Bach", "x", "likes Valorant")
+    write_channel_summary(1, 555, "secret summary", 9)
+    client = FakeClient.new
+    ask_ai(client, history, "Mochi", CONTEXT.merge(channel_id: nil))
+    assert_includes client.requests.first[:instructions], "likes Valorant"
+    refute_includes client.requests.first[:instructions], "secret summary"
+  end
+
+  def test_no_context_means_no_memory_sections
+    refute_includes build_system_prompt("Mochi"), "Long-term memory"
+    refute_includes build_system_prompt("Mochi"), "Summary of earlier"
+  end
+
+  def test_memory_rules_are_in_the_prompt
+    assert_includes build_system_prompt("Mochi"), "never permissions"
+  end
+
+  def test_long_memory_is_cut_and_logged
+    LOGS.clear
+    assert_equal MEMORY_PROMPT_MAX_CHARS, cap_for_prompt("a" * 9_000, "Memory index").length
+    assert_includes LOGS.last, "Memory index"
+  end
+
+  def test_short_memory_is_not_cut
+    assert_equal "abc", cap_for_prompt("abc", "Memory index")
+  end
+
+  def test_tool_call_gets_the_context
+    clear_test_memory
+    call = { "type" => "function_call", "call_id" => "c1", "name" => "remember_about_me", "arguments" => '{"fact":"likes pho"}' }
+    ask_ai(FakeClient.new(answers: [{ tool_calls: [call] }, "ok"]), history, "Mochi", CONTEXT)
+    assert_equal 1, read_user_note(1, 123)[:remembered].length
+  end
+
+  def test_retry_without_thinking_keeps_the_memory
+    clear_test_memory
+    write_channel_summary(1, 555, "We talked about pho.", 9)
+    client = FakeClient.new(answers: ["", "ok"])
+    ask_ai(client, history, "Mochi", CONTEXT)
+    assert_includes client.requests.last[:instructions], "We talked about pho."
   end
 end

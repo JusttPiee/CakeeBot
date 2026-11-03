@@ -45,4 +45,9 @@ class MentionChatTest < Minitest::Test
     assert_equal "Piee (123): @Cake weather?", history[0][:content]
     assert_equal "Piee (123): @Cake and <@456> too", history[1][:content] # other people's mentions stay
   end
+
+  def test_mention_context_has_no_channel_so_no_summary
+    event = Struct.new(:server, :author).new(Struct.new(:id).new(1), Struct.new(:id, :display_name).new(123, "Bach"))
+    assert_equal({ server_id: 1, channel_id: nil, requester_id: 123, requester_name: "Bach" }, mention_context(event))
+  end
 end

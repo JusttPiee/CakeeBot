@@ -4,7 +4,6 @@
 
 # The limits (MAX_HISTORY_MESSAGES, MAX_HISTORY_TOKENS) are in config.rb
 require_relative './config'
-require_relative './time_ago'
 
 # A hash of channel_id => history. A new channel gets an empty history automatically.
 def create_history_store
@@ -13,14 +12,16 @@ end
 
 # Save the user's message, with their nickname and user ID in front so the AI knows who is speaking.
 # Example: "Bach (123456789): hello"
-# `time` is when it was sent; the "[5 minutes ago]" marker is added later, when sending to OpenAI,
-# because "how long ago" keeps changing.
-def add_user_message(history, name, user_id, text, time = Time.now)
-  history << { role: "user", content: "#{name} (#{user_id}): #{text}", time: time }
+# `time` is when it was sent; the "[2026-11-04 14:02]" marker is added when sending to OpenAI.
+# user_id, name and message_id (the Discord message) are kept for compaction and long-term memory.
+def add_user_message(history, name, user_id, text, time = Time.now, message_id: nil)
+  history << { role: "user", content: "#{name} (#{user_id}): #{text}", time: time,
+               user_id: user_id.to_s, name: name, message_id: message_id }
 end
 
-def add_assistant_message(history, text)
-  history << { role: "assistant", content: text }
+# message_id: the Discord message Cake sent (the last one, if the reply was split)
+def add_assistant_message(history, text, message_id: nil)
+  history << { role: "assistant", content: text, message_id: message_id }
 end
 
 # Used when the AI request fails, so the unanswered user message does not stay in memory
@@ -34,8 +35,8 @@ def estimate_tokens(history)
   total_chars / 4
 end
 
-def too_big?(history)
-  history.length > MAX_HISTORY_MESSAGES || estimate_tokens(history) > MAX_HISTORY_TOKENS
+def too_big?(history, max_messages = MAX_HISTORY_MESSAGES, max_tokens = MAX_HISTORY_TOKENS)
+  history.length > max_messages || estimate_tokens(history) > max_tokens
 end
 
 # A "turn" = one user message + everything that answers it (assistant reply, and later tool calls)
@@ -51,20 +52,32 @@ end
 
 # Remove whole turns from the oldest side until the history fits.
 # A turn is never cut in half, and the newest turn is always kept.
-def trim_history(history)
-  while too_big?(history) && turn_count(history) > 1
+def trim_history(history, max_messages = MAX_HISTORY_MESSAGES, max_tokens = MAX_HISTORY_TOKENS)
+  while too_big?(history, max_messages, max_tokens) && turn_count(history) > 1
     remove_oldest_turn(history)
   end
 end
 
-# OpenAI expects a list of { role:, content: } hashes.
-# User messages get a time marker in front: "[2 hours ago] Bach (123): hello"
-def format_history_for_openai(history, now = Time.now)
-  history.map { |message| { role: message[:role], content: content_with_time(message, now) } }
+# The Discord id of the newest message that has one (nil if none do)
+def last_message_id(messages)
+  messages.map { |message| message[:message_id] }.compact.last
 end
 
-def content_with_time(message, now)
+# OpenAI expects a list of { role:, content: } hashes.
+# User messages get a fixed timestamp in front: "[2026-11-04 14:02] Bach (123): hello"
+# The timestamp never changes, so the same history is sent as the same text every time.
+# That lets OpenAI's prompt cache reuse it (cached input is billed much cheaper).
+def format_history_for_openai(history)
+  history.map { |message| { role: message[:role], content: content_with_time(message) } }
+end
+
+def content_with_time(message)
   return message[:content] if message[:role] != "user" || message[:time].nil?
 
-  "[#{time_ago(message[:time], now)}] #{message[:content]}"
+  "[#{format_timestamp(message[:time])}] #{message[:content]}"
+end
+
+# Bot's local time, to the minute. getlocal makes Discord's UTC times match Time.now.
+def format_timestamp(time)
+  time.getlocal.strftime('%Y-%m-%d %H:%M')
 end

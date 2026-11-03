@@ -26,7 +26,7 @@ def web_search_enabled?
 end
 
 # Runs the search and returns the results as text for the AI
-def run_web_search(arguments)
+def run_web_search(arguments, _context = {})
   query = arguments["query"].to_s.strip
   return "Error: the search query is empty." if query.empty?
 

@@ -31,11 +31,18 @@ def answer_mention(event, client)
     name_bot_mentions(history, bot_id, bot_name)
 
     event.channel.start_typing
-    answer = ask_ai(client, history, bot_name)
+    answer = ask_ai(client, history, bot_name, mention_context(event))
     if answer.nil? || answer.strip.empty?
       event.message.reply!("⚠️ My AI brain is unavailable right now. Please try again later.", mention_user: false)
     else
       send_reply(event, answer)
     end
   end
+end
+
+# Facts from Discord for memory and tools. No channel_id: mention channels have no summary,
+# but they still get the server's memory index and the memory tools.
+def mention_context(event)
+  { server_id: event.server.id, channel_id: nil,
+    requester_id: event.author.id, requester_name: event.author.display_name }
 end
