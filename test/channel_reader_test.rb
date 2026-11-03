@@ -6,13 +6,17 @@ FakeAuthor  = Struct.new(:id, :display_name)
 FakeMessage = Struct.new(:author, :content)
 
 # Pretend channel: history(n) returns the newest n messages, newest first, like Discord
-class FakeChannel
-  attr_reader :name
+FakeServer = Struct.new(:name)
 
-  def initialize(messages, error: nil)
+class FakeChannel
+  attr_reader :name, :id, :server
+
+  def initialize(messages, error: nil, id: 555)
     @messages = messages # oldest first, easier to read in tests
     @error = error
     @name = "general"
+    @id = id
+    @server = FakeServer.new("Test Server")
   end
 
   def history(amount)
@@ -21,7 +25,26 @@ class FakeChannel
   end
 end
 
+# Pretend bot: knows some channels by ID, like bot.channel(id) in discordrb
+class FakeBot
+  def initialize(channels = {}, error: nil)
+    @channels = channels
+    @error = error
+  end
+
+  def channel(id)
+    raise @error if @error
+    @channels[id.to_i]
+  end
+
+  def profile = FakeAuthor.new(999, "Cake")
+end
+
 class ChannelReaderTest < Minitest::Test
+  def setup
+    LOGS.clear
+  end
+
   BOT_ID = 999
   PIEE = FakeAuthor.new(123, "Piee")
   BOT  = FakeAuthor.new(BOT_ID, "Cake")
@@ -71,5 +94,34 @@ class ChannelReaderTest < Minitest::Test
   def test_discord_error_gives_empty_memory
     channel = FakeChannel.new([], error: RuntimeError.new("Missing Access"))
     assert_equal [], load_channel_history(channel, BOT_ID)
+  end
+
+  # --- Remembering after a restart ---
+
+  def test_startup_loads_the_saved_ai_channel
+    channel = FakeChannel.new([say(PIEE, "hi"), say(BOT, "hello Piee")])
+    histories = create_history_store
+    restore_ai_memory(FakeBot.new({ 555 => channel }), histories, "555") # ai_config.txt stores the ID as text
+    assert_equal 2, histories[555].length
+    assert_includes LOGS.last, "Test Server #general: loaded 2 messages"
+  end
+
+  def test_startup_with_ai_mode_off_loads_nothing
+    histories = create_history_store
+    restore_ai_memory(FakeBot.new, histories, nil)
+    assert_empty histories.keys
+    assert_includes LOGS.last, "AI mode is off"
+  end
+
+  def test_startup_with_a_deleted_channel_does_not_crash
+    histories = create_history_store
+    restore_ai_memory(FakeBot.new, histories, "123")
+    assert_empty histories.keys
+    assert_includes LOGS.last, "not found"
+  end
+
+  def test_startup_when_discord_refuses_does_not_crash
+    restore_ai_memory(FakeBot.new(error: RuntimeError.new("Missing Access")), create_history_store, "555")
+    assert_includes LOGS.last, "Could not open AI channel"
   end
 end

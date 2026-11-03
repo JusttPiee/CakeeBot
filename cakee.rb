@@ -513,6 +513,7 @@ word_chain_game(bot) #preload the word chain game function
 # Only announce we're alive once Discord has actually accepted the token and connected
 bot.ready do |event|
   log "🤖 Cake is alive! Logged in as #{event.bot.profile.distinct} in #{event.bot.servers.size} server(s)"
+  restore_ai_memory(event.bot, bot_state[:histories], load_ai_channel(ai_config_path)) # remember the AI chat after a restart
 end
 
 bot.disconnected do
