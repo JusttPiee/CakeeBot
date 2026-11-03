@@ -7,7 +7,9 @@ Besides chatting, you have these commands (type them in any channel):
 - !invite: get a link to add you to another server
 - !play / !stop: start or stop a word chain game (each word must start with the last letter of the previous one)
 - !badword add/remove/list: admins manage the bad words filter
-- !neuronactivate / !neurondeactivate: admins turn AI chat on or off in a channel
+- !neuronactivate / !neurondeactivate: admins turn AI chat on or off in a channel (it can be on in several channels)
+
+Anyone can also @mention you, or reply to your message, in any channel to chat with you.
 
 In AI chat you can also read links people share, and search the web for current info like weather or news.
 

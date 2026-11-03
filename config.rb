@@ -32,6 +32,6 @@ MAX_HISTORY_TOKENS = 5_000
 
 # Tools (web search, reading pages). One "round" = the AI asks for tools, we run them, send results back.
 # After this many rounds the AI must answer, so it can never loop forever.
-MAX_TOOL_ROUNDS = 3
+MAX_TOOL_ROUNDS = 7
 SEARCH_MAX_RESULTS = 5 # results per web_search
 WEBPAGE_MAX_CHARS = 8_000 # read_webpage gives the AI at most this much text (about 2,000 tokens)

@@ -38,6 +38,7 @@ require_relative './ai_chat' # Ask OpenAI and send (split) replies
 require_relative './channel_lock' # One lock per channel so messages are handled in order
 require_relative './channel_reader' # Load recent channel messages when AI mode is turned on
 require_relative './message_logger' # Save every received message to logs/messages.log
+require_relative './mention_chat' # Answer when @mentioned in any channel
 
 # Read a required secret. If it is missing, ask for it once in the terminal and save it to .env,
 # so first-time setup is just: run the bot and paste your keys.
@@ -149,7 +150,7 @@ bot.command(:help) do |event|
     embed.add_field(name: "🎮 `!play`", value: "Starts the word chain game.")
     embed.add_field(name: "🛑 `!stop`", value: "Stops the word chain game.")
     embed.add_field(name: "🤝 `!invite`", value: "Get the bot invite link.")
-    embed.add_field(name: "🧠 `!neuronactivate`", value: "Activates AI mode in the current channel (Admin only). Can only activate in one channel at a time.")
+    embed.add_field(name: "🧠 `!neuronactivate`", value: "Activates AI mode in the current channel (Admin only). Can be on in several channels at once.")
     embed.add_field(name: "🧠 `!neurondeactivate`", value: "Deactivates AI mode in the current channel (Admin only).")
 
     embed.footer = Discordrb::Webhooks::EmbedFooter.new(text: "Made by Piee")
@@ -348,8 +349,7 @@ def word_chain_game(bot) #Code for the word chain game
   wrong_attempts = 0
   bot.command(:play) do |event| #Starts the game
     ai_config_path = 'ai_config.txt' # Path to the AI channel ID file
-    ai_channel_id = load_ai_channel(ai_config_path) # assign the AI channel ID to ai_channel_id variable
-    if ai_channel_id && ai_channel_id == event.channel.id.to_s # If AI mode is active in the channel, prevent starting the game
+    if ai_channel?(ai_config_path, event.channel.id) # If AI mode is active in the channel, prevent starting the game
       event.respond "⚠️ Neuron mode is currently active in this channel. Please deactivate it using `!neurondeactivate` before playing the game." # Send a warning message if AI mode is active
       next
     end
@@ -425,11 +425,12 @@ end
 
 # AI functionality
 
-ai_config_path = 'ai_config.txt' # Path to the AI channel ID file
+ai_config_path = 'ai_config.txt' # AI channel IDs, one per line (AI mode can be on in several channels)
 
 bot.command(:neuronactivate) do |event| # turn on AI mode
   if event.user.permission?(:administrator)
-    save_ai_channel(ai_config_path, event.channel.id) # Save the channel ID to the file
+    add_ai_channel(ai_config_path, event.channel.id) # Add this channel to the saved list (other AI channels stay on)
+    log "🧠 AI mode turned on in #{describe_message_place(event)}"
     with_channel_lock(event.channel.id) do # Start this channel's AI memory from its recent messages
       bot_state[:histories][event.channel.id] = load_channel_history(event.channel, event.bot.profile.id)
     end
@@ -452,8 +453,9 @@ end
 
 bot.command(:neurondeactivate) do |event| # turn off AI mode
   if event.user.permission?(:administrator)
-    if File.exist?(ai_config_path) # Check if the AI channel ID file exists
-      File.delete(ai_config_path) # Delete the file to deactivate AI mode
+    if remove_ai_channel(ai_config_path, event.channel.id) # Only this channel; other AI channels stay on
+      bot_state[:histories].delete(event.channel.id) # Free this channel's memory
+      log "🧠 AI mode turned off in #{describe_message_place(event)}"
       event.channel.send_embed do |embed|
         embed.title = "🧠 Neuron Mode Deactivated"
         embed.description = "Neuron Mode has been **deactivated** for this channel!"
@@ -464,7 +466,7 @@ bot.command(:neurondeactivate) do |event| # turn off AI mode
     else
       event.channel.send_embed do |embed| # Send an embed message if AI mode is not active
         embed.title = "⚠️ Neuron Mode Not Active"
-        embed.description = "Neuron Mode is not currently active."
+        embed.description = "Neuron Mode is not active in this channel."
         embed.color = 0xF1C40F # Yellow
         embed.timestamp = Time.now
       end
@@ -483,9 +485,8 @@ end
 
 bot.message do |event| # Message event to handle AI interactions
   next if event.message.content.start_with?('!') #skip if prefix detected
-  ai_channel_id = load_ai_channel(ai_config_path) # Load the AI channel ID from the file
-  next unless ai_channel_id && ai_channel_id == event.channel.id.to_s # Check if the message is in the AI channel, or if AI mode is activated in the channel
-  
+  next unless ai_channel?(ai_config_path, event.channel.id) # Only answer every message in AI channels
+
   prompt = event.message.content.strip # Get the message content
 
   with_channel_lock(event.channel.id) do # Handle this channel's messages one at a time
@@ -508,12 +509,22 @@ bot.message do |event| # Message event to handle AI interactions
   end
 end
 
+bot.message do |event| # Answer when @mentioned (or replied to) in any other channel
+  next if event.server.nil? # DMs: not handled yet
+  next if event.message.content.start_with?('!') # commands are handled by bot.command
+  next if event.author.id == event.bot.profile.id # never answer ourselves
+  next unless mentions_bot?(event.message, event.bot.profile.id)
+  next if ai_channel?(ai_config_path, event.channel.id) # AI channels already answer everything
+
+  answer_mention(event, client)
+end
+
 word_chain_game(bot) #preload the word chain game function
 
 # Only announce we're alive once Discord has actually accepted the token and connected
 bot.ready do |event|
   log "🤖 Cake is alive! Logged in as #{event.bot.profile.distinct} in #{event.bot.servers.size} server(s)"
-  restore_ai_memory(event.bot, bot_state[:histories], load_ai_channel(ai_config_path)) # remember the AI chat after a restart
+  restore_ai_memory(event.bot, bot_state[:histories], load_ai_channels(ai_config_path)) # remember the AI chats after a restart
 end
 
 bot.disconnected do

@@ -4,6 +4,7 @@
 
 # The limits (MAX_HISTORY_MESSAGES, MAX_HISTORY_TOKENS) are in config.rb
 require_relative './config'
+require_relative './time_ago'
 
 # A hash of channel_id => history. A new channel gets an empty history automatically.
 def create_history_store
@@ -12,8 +13,10 @@ end
 
 # Save the user's message, with their nickname and user ID in front so the AI knows who is speaking.
 # Example: "Bach (123456789): hello"
-def add_user_message(history, name, user_id, text)
-  history << { role: "user", content: "#{name} (#{user_id}): #{text}" }
+# `time` is when it was sent; the "[5 minutes ago]" marker is added later, when sending to OpenAI,
+# because "how long ago" keeps changing.
+def add_user_message(history, name, user_id, text, time = Time.now)
+  history << { role: "user", content: "#{name} (#{user_id}): #{text}", time: time }
 end
 
 def add_assistant_message(history, text)
@@ -54,7 +57,14 @@ def trim_history(history)
   end
 end
 
-# OpenAI expects a list of { role:, content: } hashes
-def format_history_for_openai(history)
-  history.map { |message| { role: message[:role], content: message[:content] } }
+# OpenAI expects a list of { role:, content: } hashes.
+# User messages get a time marker in front: "[2 hours ago] Bach (123): hello"
+def format_history_for_openai(history, now = Time.now)
+  history.map { |message| { role: message[:role], content: content_with_time(message, now) } }
+end
+
+def content_with_time(message, now)
+  return message[:content] if message[:role] != "user" || message[:time].nil?
+
+  "[#{time_ago(message[:time], now)}] #{message[:content]}"
 end

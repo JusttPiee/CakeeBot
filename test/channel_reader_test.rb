@@ -3,7 +3,7 @@ require_relative "../channel_reader"
 
 # Pretend Discord messages and authors (only the fields the reader uses)
 FakeAuthor  = Struct.new(:id, :display_name)
-FakeMessage = Struct.new(:author, :content)
+FakeMessage = Struct.new(:author, :content, :creation_time)
 
 # Pretend channel: history(n) returns the newest n messages, newest first, like Discord
 FakeServer = Struct.new(:name)
@@ -49,7 +49,7 @@ class ChannelReaderTest < Minitest::Test
   PIEE = FakeAuthor.new(123, "Piee")
   BOT  = FakeAuthor.new(BOT_ID, "Cake")
 
-  def say(author, text) = FakeMessage.new(author, text)
+  def say(author, text, sent_at = Time.now) = FakeMessage.new(author, text, sent_at)
 
   def test_messages_are_in_oldest_first_order
     channel = FakeChannel.new([say(PIEE, "first"), say(PIEE, "second")])
@@ -65,7 +65,15 @@ class ChannelReaderTest < Minitest::Test
 
   def test_other_people_get_the_name_and_id_prefix
     channel = FakeChannel.new([say(PIEE, "valorant?")])
-    assert_equal({ role: "user", content: "Piee (123): valorant?" }, load_channel_history(channel, BOT_ID).first)
+    first = load_channel_history(channel, BOT_ID).first
+    assert_equal "user", first[:role]
+    assert_equal "Piee (123): valorant?", first[:content]
+  end
+
+  def test_discord_send_time_is_kept_for_the_time_marker
+    sent_at = Time.new(2026, 11, 1, 20, 0, 0)
+    channel = FakeChannel.new([say(PIEE, "gn everyone", sent_at)])
+    assert_equal sent_at, load_channel_history(channel, BOT_ID).first[:time]
   end
 
   def test_commands_are_included
@@ -101,27 +109,36 @@ class ChannelReaderTest < Minitest::Test
   def test_startup_loads_the_saved_ai_channel
     channel = FakeChannel.new([say(PIEE, "hi"), say(BOT, "hello Piee")])
     histories = create_history_store
-    restore_ai_memory(FakeBot.new({ 555 => channel }), histories, "555") # ai_config.txt stores the ID as text
+    restore_ai_memory(FakeBot.new({ 555 => channel }), histories, ["555"]) # ai_config.txt stores IDs as text
     assert_equal 2, histories[555].length
     assert_includes LOGS.last, "Test Server #general: loaded 2 messages"
   end
 
+  def test_startup_loads_every_ai_channel_into_its_own_memory
+    general = FakeChannel.new([say(PIEE, "in general")], id: 555)
+    gaming = FakeChannel.new([say(PIEE, "in gaming"), say(BOT, "gg")], id: 777)
+    histories = create_history_store
+    restore_ai_memory(FakeBot.new({ 555 => general, 777 => gaming }), histories, %w[555 777])
+    assert_equal ["Piee (123): in general"], histories[555].map { |m| m[:content] }
+    assert_equal ["Piee (123): in gaming", "gg"], histories[777].map { |m| m[:content] }
+  end
+
   def test_startup_with_ai_mode_off_loads_nothing
     histories = create_history_store
-    restore_ai_memory(FakeBot.new, histories, nil)
+    restore_ai_memory(FakeBot.new, histories, [])
     assert_empty histories.keys
     assert_includes LOGS.last, "AI mode is off"
   end
 
   def test_startup_with_a_deleted_channel_does_not_crash
     histories = create_history_store
-    restore_ai_memory(FakeBot.new, histories, "123")
+    restore_ai_memory(FakeBot.new, histories, ["123"])
     assert_empty histories.keys
     assert_includes LOGS.last, "not found"
   end
 
   def test_startup_when_discord_refuses_does_not_crash
-    restore_ai_memory(FakeBot.new(error: RuntimeError.new("Missing Access")), create_history_store, "555")
+    restore_ai_memory(FakeBot.new(error: RuntimeError.new("Missing Access")), create_history_store, ["555"])
     assert_includes LOGS.last, "Could not open AI channel"
   end
 end

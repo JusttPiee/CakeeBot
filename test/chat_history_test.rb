@@ -15,7 +15,15 @@ class ChatHistoryTest < Minitest::Test
   def test_user_message_has_nickname_and_id_prefix
     history = []
     add_user_message(history, "Bach", 123456789, "hello")
-    assert_equal({ role: "user", content: "Bach (123456789): hello" }, history.last)
+    assert_equal "user", history.last[:role]
+    assert_equal "Bach (123456789): hello", history.last[:content]
+  end
+
+  def test_user_message_remembers_when_it_was_sent
+    sent_at = Time.new(2026, 11, 1, 9, 0, 0)
+    history = []
+    add_user_message(history, "Bach", 123, "hello", sent_at)
+    assert_equal sent_at, history.last[:time]
   end
 
   def test_each_channel_gets_its_own_history
@@ -84,7 +92,22 @@ class ChatHistoryTest < Minitest::Test
 
   def test_format_for_openai_keeps_role_and_content
     history = make_history(1)
-    assert_equal [{ role: "user", content: "Bach (123): hi 0" }, { role: "assistant", content: "reply 0" }],
+    assert_equal [{ role: "user", content: "[just now] Bach (123): hi 0" }, { role: "assistant", content: "reply 0" }],
                  format_history_for_openai(history)
+  end
+
+  def test_old_user_messages_get_a_time_marker
+    now = Time.new(2026, 11, 3, 12, 0, 0)
+    history = []
+    add_user_message(history, "Bach", 123, "I'm hungry", now - (3 * 24 * 3600))
+    add_assistant_message(history, "Try pho!")
+    sent = format_history_for_openai(history, now)
+    assert_equal "[3 days ago] Bach (123): I'm hungry", sent.first[:content]
+    assert_equal "Try pho!", sent.last[:content] # Cake's own messages get no marker
+  end
+
+  def test_messages_without_a_time_get_no_marker
+    history = [{ role: "user", content: "Bach (123): hi" }]
+    assert_equal "Bach (123): hi", format_history_for_openai(history).first[:content]
   end
 end

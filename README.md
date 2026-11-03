@@ -25,7 +25,9 @@ A multifunctional Discord bot written in Ruby. It can:
 
 **Word chain rules:** each word must be a real English word, can't be reused, and must start with the last letter of the previous word. The same person can't go twice in a row. After 3 wrong attempts, the game ends and the last player with a valid word wins.
 
-**AI chat:** once an admin runs `!neuronactivate`, every message in that channel (except commands) gets an AI reply. The bot knows who is speaking (by nickname and user ID) and remembers the last 45 messages of the conversation (up to about 5,000 tokens), so API costs stay low. When AI mode is turned on, it reads the last 45 messages in the channel so it knows what people were talking about. It forgets the conversation when the bot restarts. Replies longer than Discord's 2000-character limit are split into several messages. AI chat can only be active in one channel at a time.
+**AI chat:** once an admin runs `!neuronactivate`, every message in that channel (except commands) gets an AI reply. The bot knows who is speaking (by nickname and user ID) and remembers the last 45 messages of the conversation (up to about 5,000 tokens), so API costs stay low. When AI mode is turned on, and again when the bot starts, it reads the last 45 messages in the channel so it knows what people were talking about, even after a restart. Replies longer than Discord's 2000-character limit are split into several messages. AI chat can be on in several channels at once, and each channel has its own memory.
+
+**Mentions:** in any channel, `@Cake` or a reply to one of Cake's messages gets an AI answer. Each time, Cake reads that channel's last 45 messages as context.
 
 ---
 

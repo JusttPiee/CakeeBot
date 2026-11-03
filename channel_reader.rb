@@ -4,14 +4,18 @@
 require_relative './chat_history'
 require_relative './channel_lock'
 
-# On startup: if AI mode was on in a channel (saved in ai_config.txt), load that channel's
-# recent messages again, so the AI remembers the conversation from before the restart.
-def restore_ai_memory(bot, histories, channel_id)
-  if channel_id.nil?
+# On startup: for every channel where AI mode was on (saved in ai_config.txt), load its
+# recent messages again, so the AI remembers the conversations from before the restart.
+def restore_ai_memory(bot, histories, channel_ids)
+  if channel_ids.empty?
     log "🧠 AI mode is off (no channel activated with !neuronactivate)"
     return
   end
 
+  channel_ids.each { |channel_id| restore_channel_memory(bot, histories, channel_id) }
+end
+
+def restore_channel_memory(bot, histories, channel_id)
   channel = find_channel(bot, channel_id)
   return if channel.nil?
 
@@ -51,7 +55,7 @@ def build_history_from_messages(messages, bot_id)
     if message.author.id == bot_id
       add_assistant_message(history, text)
     else
-      add_user_message(history, message.author.display_name, message.author.id, text)
+      add_user_message(history, message.author.display_name, message.author.id, text, message.creation_time)
     end
   end
   trim_history(history) # the token limit still applies

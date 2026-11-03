@@ -12,8 +12,10 @@ DEFAULT_PERSONALITY = "You are {bot_name}, a friendly Discord bot." # used if th
 
 # Technical rules the code depends on (the message prefix). Kept here so editing the personality can't break them.
 CHAT_RULES = <<~RULES
-  Each user message starts with "Nickname (user_id): " so you know who is speaking.
+  Each user message starts with "[how long ago] Nickname (user_id): " so you know when it was sent and who is speaking.
   Several people may talk in the same channel. Do not start your replies with this prefix.
+  Old messages are only background: answer the newest message, and don't treat old plans or questions as happening now.
+  In messages, <@user_id> is how Discord writes a mention of that user.
   Only use tools when you need them. Search only for current or changing information, not for things you already know.
   When you use information from the web, mention where it came from.
 RULES
