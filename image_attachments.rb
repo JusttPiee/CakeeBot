@@ -2,6 +2,7 @@
 # The AI only sees a small marker in the text, like "[image 42: cat.png]", and opens the picture
 # with the look_at_image tool when someone asks about it (tools/look_at_image.rb).
 require_relative './config'
+require_relative './text_attachments'
 
 VIEWABLE_IMAGE_TYPES = %w[image/png image/jpeg image/webp].freeze
 
@@ -9,12 +10,7 @@ def viewable_image_type?(content_type)
   VIEWABLE_IMAGE_TYPES.include?(content_type.to_s.split(';').first.to_s.strip)
 end
 
-# The message's text plus a marker for each image. "" if it has neither.
-def text_with_image_markers(message)
-  [message.content.to_s.strip, image_markers(message)].reject(&:empty?).join(" ")
-end
-
-# "[image 42: cat.png] [dance.gif: this image type can't be viewed]". Other files get no marker.
+# "[image 42: cat.png] [dance.gif: this image type can't be viewed]". Other files get no marker here.
 def image_markers(message)
   images = message.attachments.select(&:image?)
   images.map { |attachment| image_marker(attachment) }.join(" ")
@@ -54,7 +50,7 @@ def images_in_history(history)
 end
 
 # When someone replies to a message, the AI must know whose message it was, or it thinks
-# everything belongs to the person asking. Images in that message can be opened too.
+# everything belongs to the person asking. Images and text files in that message can be opened too.
 # history_entry is the reply in the history, message is the reply from Discord.
 # reply? is only true when Discord sent the replied message along, so this makes no extra Discord request.
 def add_reply_note(history_entry, message)
@@ -65,13 +61,14 @@ def add_reply_note(history_entry, message)
 
   history_entry[:content] += " #{reply_note(replied)}"
   history_entry[:images] = history_entry[:images].to_a + images_from_message(replied)
+  history_entry[:text_files] = history_entry[:text_files].to_a + text_files_from_message(replied)
 rescue StandardError => e
   log "⚠️ Could not read the replied message (#{e.class})." # the reply still works without the note
 end
 
 # "(replying to b (777): gg ez [image 42: cat.png])"
 def reply_note(replied)
-  parts = [short_quote(replied.content), image_markers(replied)].reject(&:empty?)
+  parts = [short_quote(replied.content), image_markers(replied), text_file_markers(replied)].reject(&:empty?)
   "(replying to #{replied.author.display_name} (#{replied.author.id}): #{parts.join(' ')})"
 end
 

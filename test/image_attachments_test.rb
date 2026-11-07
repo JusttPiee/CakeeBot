@@ -36,23 +36,23 @@ class ImageAttachmentsTest < Minitest::Test
 
   def test_marker_is_added_after_the_message_text
     message = FakeMessage.new("look", [png])
-    assert_equal "look [image 42: cat.png]", text_with_image_markers(message)
+    assert_equal "look [image 42: cat.png]", text_with_attachment_markers(message)
   end
 
   def test_message_with_only_an_image_still_has_text
-    assert_equal "[image 42: cat.png]", text_with_image_markers(FakeMessage.new("", [png]))
+    assert_equal "[image 42: cat.png]", text_with_attachment_markers(FakeMessage.new("", [png]))
   end
 
   def test_message_without_attachments_keeps_its_text
-    assert_equal "hello", text_with_image_markers(FakeMessage.new(" hello ", []))
+    assert_equal "hello", text_with_attachment_markers(FakeMessage.new(" hello ", []))
   end
 
   def test_gif_marker_says_it_cannot_be_viewed
-    assert_equal "[dance.gif: this image type can't be viewed]", text_with_image_markers(FakeMessage.new("", [gif]))
+    assert_equal "[dance.gif: this image type can't be viewed]", text_with_attachment_markers(FakeMessage.new("", [gif]))
   end
 
   def test_files_that_are_not_images_get_no_marker
-    assert_equal "read this", text_with_image_markers(FakeMessage.new("read this", [pdf]))
+    assert_equal "read this", text_with_attachment_markers(FakeMessage.new("read this", [pdf]))
   end
 
   # --- Which images can be opened ---

@@ -15,8 +15,9 @@ require_relative './memory_tidy'
 AI_UNAVAILABLE_MESSAGE = "⚠️ My AI brain is unavailable right now. Please try again later."
 
 def answer_ai_channel_message(event, client, history)
-  add_user_message(history, event.author.display_name, event.author.id, text_with_image_markers(event.message), Time.now,
-                   message_id: event.message.id, images: images_from_message(event.message))
+  add_user_message(history, event.author.display_name, event.author.id, text_with_attachment_markers(event.message), Time.now,
+                   message_id: event.message.id, images: images_from_message(event.message),
+                   text_files: text_files_from_message(event.message))
   add_reply_note(history.last, event.message)
   # Safety net: normally compaction keeps the history small. If it keeps failing, cut the old way here.
   trim_history(history, HARD_MAX_HISTORY_MESSAGES, HARD_MAX_HISTORY_TOKENS)

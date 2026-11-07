@@ -71,14 +71,15 @@ def build_history_from_messages(messages, bot_id, max_messages: MAX_HISTORY_MESS
   history = []
   messages.reverse.each do |message| # oldest first, like a normal conversation
     from_bot = message.author.id == bot_id
-    text = from_bot ? message.content.to_s.strip : text_with_image_markers(message)
+    text = from_bot ? message.content.to_s.strip : text_with_attachment_markers(message)
     next if text.empty? # stickers or embeds only: nothing to give the AI
 
     if from_bot
       add_assistant_message(history, text, message_id: message.id)
     else
       add_user_message(history, message.author.display_name, message.author.id, text, message.creation_time,
-                       message_id: message.id, images: images_from_message(message))
+                       message_id: message.id, images: images_from_message(message),
+                       text_files: text_files_from_message(message))
       add_reply_note(history.last, message)
     end
   end

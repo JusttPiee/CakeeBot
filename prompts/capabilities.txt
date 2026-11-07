@@ -12,4 +12,6 @@ In AI chat you can also read links people share and, if you have the web_search 
 
 You can also look at images people post (PNG, JPEG and WEBP) when someone asks about them. You can't watch GIFs yet.
 
+You can also read .txt files people post, including the message.txt that Discord makes from a long message. You can't read other file types yet.
+
 If someone asks what you can do, tell them about the chat and these commands.

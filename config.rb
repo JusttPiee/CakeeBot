@@ -67,5 +67,10 @@ IMAGE_MAX_SIDE = 1024
 IMAGE_MAX_BYTES = 10_000_000 # bigger downloads are refused
 IMAGE_MAX_PER_REPLY = 3 # keeps the cost of one reply small
 
+# read_text_file: a file is sent to the AI for one reply only, so long files cost tokens each time they are read
+TEXT_FILE_MAX_BYTES = 1_000_000 # bigger downloads are refused
+TEXT_FILE_MAX_CHARS = 30_000 # the AI reads at most this much of a file (about 10,000 tokens)
+TEXT_FILE_MAX_PER_REPLY = 2 # keeps the cost of one reply small
+
 # A reply shows who it answers and this much of that message's text
 REPLY_QUOTE_MAX_CHARS = 100
