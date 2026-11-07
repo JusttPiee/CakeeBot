@@ -5,6 +5,7 @@
 require_relative './channel_reader'
 require_relative './channel_lock'
 require_relative './ai_chat'
+require_relative './message_logger'
 
 # true if the message @mentions the bot, or is a reply to one of the bot's messages.
 # @everyone / @here are not counted: Discord does not put the bot in `mentions` for those.
@@ -36,6 +37,7 @@ def answer_mention(event, client)
       event.message.reply!("⚠️ My AI brain is unavailable right now. Please try again later.", mention_user: false)
     else
       send_reply(event, answer)
+      log_bot_reply(event, answer)
     end
   end
 end

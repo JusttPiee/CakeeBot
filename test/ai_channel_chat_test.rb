@@ -9,10 +9,12 @@ require_relative "../ai_channel_chat"
 class FakeAiEvent
   FakeUser = Struct.new(:id, :display_name)
   FakeBotMember = Struct.new(:display_name)
-  FakeServer = Struct.new(:id, :bot)
-  FakeChannel = Struct.new(:id) do
+  FakeServer = Struct.new(:id, :bot, :name)
+  FakeChannel = Struct.new(:id, :name) do
     def start_typing = nil
   end
+  FakeBot = Struct.new(:profile)
+  FakeProfile = Struct.new(:id)
 
   attr_reader :sent, :author, :server, :channel, :id
 
@@ -21,10 +23,11 @@ class FakeAiEvent
     @id = message_id
     @sent = []
     @author = FakeUser.new(123, "Bach")
-    @server = FakeServer.new(1, FakeBotMember.new(bot_name))
-    @channel = FakeChannel.new(555)
+    @server = FakeServer.new(1, FakeBotMember.new(bot_name), "My Server")
+    @channel = FakeChannel.new(555, "general")
   end
 
+  def bot = FakeBot.new(FakeProfile.new(999))
   def message = self # event.message.id / .content / .reply! land here
   def content = @text
 
@@ -44,6 +47,12 @@ class AiChannelChatTest < Minitest::Test
     history = []
     answer_ai_channel_message(FakeAiEvent.new("hello", message_id: 500), FakeClient.new(answers: ["Hi!"]), history)
     assert_equal [500, 1], history.map { |m| m[:message_id] }
+  end
+
+  def test_reply_is_written_to_the_log
+    answer_ai_channel_message(FakeAiEvent.new("hello"), FakeClient.new(answers: ["A reply to find in the log"]), [])
+    logged = Dir.glob(File.join(MESSAGE_LOG_DIR, "**", "*.log")).map { |path| File.read(path) }.join
+    assert_includes logged, "My Server #general | Cake (999): A reply to find in the log"
   end
 
   def test_compaction_runs_when_history_is_full

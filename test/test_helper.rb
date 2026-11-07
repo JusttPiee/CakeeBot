@@ -6,6 +6,8 @@ require "fileutils"
 # Memory files go to a temp folder in tests, never to the real memory/ folder.
 # This must run before config.rb is loaded (config.rb reads it into MEMORY_DIR).
 ENV["CAKE_TEST_MEMORY_DIR"] ||= Dir.mktmpdir("cake-memory")
+# Log files too (message_logger.rb reads this into MESSAGE_LOG_DIR).
+ENV["CAKE_TEST_LOG_DIR"] ||= Dir.mktmpdir("cake-logs")
 
 # log and describe_openai_error normally come from cakee.rb.
 # In tests, log lines are collected in LOGS so tests can check them.

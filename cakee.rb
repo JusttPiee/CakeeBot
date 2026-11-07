@@ -4,13 +4,14 @@ require 'json' # Load required gems
 require 'openai' # OpenAI lib from https://github.com/alexrudall/ruby-openai
 require 'dotenv' # Load secrets from a .env file into ENV
 require 'io/console' # Hide secrets while the user types them
+require_relative './message_logger' # Save messages, AI replies and status lines to logs/<day>/<hour>.log
 
 ENV_FILE = File.join(__dir__, '.env') # .env lives next to cakee.rb
 ENV_TEMPLATE = File.join(__dir__, '.env.example') # Template listing every setting, with explanations
 
-# Print a timestamped line to the terminal
+# Print a timestamped line to the terminal, and save it to the log file
 def log(message)
-  puts "[#{Time.now.strftime('%Y-%m-%d %H:%M:%S')}] #{message}"
+  log_status_line(message)
 end
 
 # First run: build .env from .env.example, so every setting (and its explanation) is already in the file
@@ -37,7 +38,6 @@ require_relative './chat_history' # Per-channel AI memory (add, trim)
 require_relative './ai_chat' # Ask OpenAI and send (split) replies
 require_relative './channel_lock' # One lock per channel so messages are handled in order
 require_relative './channel_reader' # Load recent channel messages when AI mode is turned on
-require_relative './message_logger' # Save every received message to logs/messages.log
 require_relative './mention_chat' # Answer when @mentioned in any channel
 require_relative './ai_channel_chat' # Answer in AI channels, with long-term memory and compaction
 
@@ -233,7 +233,7 @@ def contains_bad_word?(message, bad_words) # Check if the message contains any b
   return false # If no bad words are found in the message, return false
 end
 
-bot.message do |event| # Save every message the bot receives (name + user ID) to logs/messages.log
+bot.message do |event| # Save every message the bot receives (name + user ID) to logs/<day>/<hour>.log
   log_received_message(event)
 end
 
