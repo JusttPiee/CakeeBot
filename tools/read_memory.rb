@@ -20,6 +20,7 @@ def run_read_memory(arguments, context)
   return MEMORY_NOT_AVAILABLE if context[:server_id].nil?
 
   path = arguments["path"].to_s.strip
+  log "🔎 read_memory by #{context[:requester_name]} (#{context[:requester_id]}): #{path}"
   # Channel summaries stay private to their own channel (a mod channel's summary must not leak).
   # The current channel's summary is already in the prompt, so the AI never needs to open one.
   return "Error: channel summaries can't be opened with read_memory." if path.start_with?("channels/")

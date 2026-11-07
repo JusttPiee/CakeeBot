@@ -12,6 +12,8 @@ require_relative './tools/remember_about_someone'
 require_relative './tools/update_memory'
 require_relative './tools/forget_memory'
 require_relative './tools/merge_memories'
+require_relative './tools/update_my_personality'
+require_relative './tools/forget_my_personality'
 
 # name => { definition: what the AI sees, run: the Ruby method that does the work }
 def available_tools
@@ -26,6 +28,8 @@ def available_tools
   tools["update_memory"] = { definition: UPDATE_MEMORY_DEFINITION, run: method(:run_update_memory) }
   tools["forget_memory"] = { definition: FORGET_MEMORY_DEFINITION, run: method(:run_forget_memory) }
   tools["merge_memories"] = { definition: MERGE_MEMORIES_DEFINITION, run: method(:run_merge_memories) }
+  tools["update_my_personality"] = { definition: UPDATE_MY_PERSONALITY_DEFINITION, run: method(:run_update_my_personality) }
+  tools["forget_my_personality"] = { definition: FORGET_MY_PERSONALITY_DEFINITION, run: method(:run_forget_my_personality) }
   tools
 end
 

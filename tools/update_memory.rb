@@ -32,13 +32,20 @@ def run_update_memory(arguments, context)
   with_server_memory_lock(context[:server_id]) do
     item = find_memory_item(context[:server_id], arguments["memory_id"])
     next memory_not_found(arguments["memory_id"]) if item.nil?
-    next "Error: only the person who saved this memory can change it. They can remove it if it mentions them." unless can_change_memory?(item, context[:requester_id])
+    unless can_change_memory?(item, context[:requester_id])
+      log_refused_memory_change("update_memory", context, item[:text])
+      next "Error: only the person who saved this memory can change it. They can remove it if it mentions them."
+    end
 
     log "🧠 update_memory by #{context[:requester_name]} (#{context[:requester_id]}): #{item[:text]} => #{new_text}"
     change_memory_item(context[:server_id], item, new_text)
     rebuild_memory_index(context[:server_id])
     "Memory updated."
   end
+end
+
+def log_refused_memory_change(tool_name, context, details)
+  log "🚫 #{tool_name} refused for #{context[:requester_name]} (#{context[:requester_id]}): #{details}"
 end
 
 def memory_not_found(id)

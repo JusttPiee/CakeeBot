@@ -28,8 +28,10 @@ TIDY_INSTRUCTIONS = read_prompt("tidy_memory") # loaded once, at startup
 TIDY_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: %w[merges question],
+  required: %w[merges question new_personality new_description],
   properties: {
+    new_personality: { type: "string" },
+    new_description: { type: "string" },
     merges: {
       type: "array",
       items: {
@@ -56,6 +58,7 @@ def tidy_and_ask(event, client, history = nil)
   log_bot_reply(event, question)
   add_assistant_message(history, question, message_id: sent&.id) if history
   record_asked_question(server_id, user_id, question)
+  log_memory_question(user_id, event.channel.id)
 rescue StandardError => e
   log "⚠️ Could not ask about a memory conflict (#{e.class})."
 end
@@ -65,11 +68,15 @@ def tidy_memory_if_needed(client, server_id, user_id)
   return if open_question_text(server_id, user_id) # one question at a time
 
   memories = with_server_memory_lock(server_id) { memories_to_check(server_id, user_id) }
-  return if memories[:own].length + memories[:related].length < MEMORY_TIDY_MIN_FACTS
+  return if things_to_compare(server_id, user_id, memories) < MEMORY_TIDY_MIN_FACTS
   return unless memories_changed_since_last_check?(server_id, user_id, memories)
 
   result = request_tidy(client, memories, tidy_extras(server_id, user_id))
-  apply_and_log_tidy(server_id, user_id, result) unless own_facts_already_tidied?(server_id, user_id, memories[:own])
+  if own_facts_already_tidied?(server_id, user_id, memories[:own])
+    log_no_tidy_changes(user_id)
+  else
+    apply_and_log_tidy(server_id, user_id, result)
+  end
   remember_checked_memories(server_id, user_id) # what is saved now, so a note that was just tidied isn't checked again
   question_from(result)
 rescue StandardError => e
@@ -143,7 +150,7 @@ def deliver_memory_question(bot, server_id, user_id, question, histories)
 
   send_memory_question(channel, user_id, question, histories)
   record_asked_question(server_id, user_id, question)
-  log "❓ Asked user #{user_id} about their memory in channel #{channel_id}"
+  log_memory_question(user_id, channel_id)
 rescue StandardError => e
   save_pending_question(server_id, user_id, question)
   log "⚠️ Could not send a memory question to user #{user_id} (#{e.class}). It will wait for their next message."
@@ -159,22 +166,52 @@ def send_memory_question(channel, user_id, question, histories)
   end
 end
 
+def log_memory_question(user_id, channel_id)
+  log "❓ Asked user #{user_id} about their memory in channel #{channel_id}"
+end
+
+def log_no_tidy_changes(user_id)
+  log "🧹 Checked memory of user #{user_id}: no changes"
+end
+
 def question_from(result)
   question = result["question"].to_s.strip
   question.empty? ? nil : question
 end
 
 def apply_and_log_tidy(server_id, user_id, result)
-  changed, written, own = with_server_memory_lock(server_id) do
+  changed, written, corrected, own = with_server_memory_lock(server_id) do
     counts = apply_tidy(server_id, user_id, result.fetch("merges").to_a)
-    [*counts, facts_of_person(server_id, user_id)]
+    [*counts, apply_personality_correction(server_id, user_id, result), facts_of_person(server_id, user_id)]
   end
-  update_tidy_state(server_id, user_id, tidied: facts_fingerprint(own))
+  update_tidy_state(server_id, user_id, tidied: memories_fingerprint(server_id, user_id, own))
   log "🧹 Tidied memory of user #{user_id}: rewrote #{changed} facts into #{written}" if changed.positive?
+  log_no_tidy_changes(user_id) unless changed.positive? || corrected
+end
+
+# Fixes the personality note where it disagrees with the person's facts. true if it changed.
+# It can only correct a note that exists, so tidying never starts one by itself. Call this holding the memory lock.
+def apply_personality_correction(server_id, user_id, result)
+  note = read_user_note(server_id, user_id)
+  return false if note.nil? || note[:personality].empty?
+
+  personality = corrected_text(result["new_personality"], note[:personality])
+  description = corrected_text(result["new_description"], note[:description])
+  return false if personality == note[:personality] && description == note[:description]
+
+  write_user_personality(server_id, user_id, note[:name], personality, description)
+  log "🧹 Corrected personality note of user #{user_id}: #{note[:personality]} => #{personality}"
+  true
+end
+
+# The AI returns an empty string when there is nothing to fix
+def corrected_text(suggestion, current)
+  text = suggestion.to_s.strip
+  text.empty? ? current : text
 end
 
 def own_facts_already_tidied?(server_id, user_id, own)
-  tidy_state_of(server_id, user_id)["tidied"] == facts_fingerprint(own)
+  tidy_state_of(server_id, user_id)["tidied"] == memories_fingerprint(server_id, user_id, own)
 end
 
 def facts_of_person(server_id, user_id)
@@ -198,7 +235,7 @@ end
 # Marks the memories as checked straight away, so a request that keeps failing isn't repeated on every message.
 # A check that failed is tried again after MEMORY_CHECK_RETRY_SECONDS, so an outage doesn't lose it.
 def memories_changed_since_last_check?(server_id, user_id, memories)
-  fingerprint = facts_fingerprint(memories[:own] + memories[:related])
+  fingerprint = memories_fingerprint(server_id, user_id, memories[:own] + memories[:related])
   state = tidy_state_of(server_id, user_id)
   return false if state["checked"] == fingerprint && !failed_check_due?(state)
 
@@ -217,11 +254,29 @@ end
 
 def remember_checked_memories(server_id, user_id)
   memories = with_server_memory_lock(server_id) { memories_to_check(server_id, user_id) }
-  update_tidy_state(server_id, user_id, checked: facts_fingerprint(memories[:own] + memories[:related]))
+  update_tidy_state(server_id, user_id, checked: memories_fingerprint(server_id, user_id, memories[:own] + memories[:related]))
 end
 
 def facts_fingerprint(facts)
   Digest::SHA1.hexdigest(facts.map { |fact| fact[:id] }.join(","))
+end
+
+# For deciding when to tidy: compaction can change the personality note without any fact changing
+def memories_fingerprint(server_id, user_id, facts)
+  personality = personality_of(server_id, user_id)
+  Digest::SHA1.hexdigest("#{facts_fingerprint(facts)},#{personality[:text]},#{personality[:description]}")
+end
+
+# { text:, description: }, both "" if there is no note. Don't call this while holding the memory lock.
+def personality_of(server_id, user_id)
+  note = with_server_memory_lock(server_id) { read_user_note(server_id, user_id) }
+  { text: note ? note[:personality] : "", description: note ? note[:description] : "" }
+end
+
+# A personality note also counts, because it can disagree with a fact
+def things_to_compare(server_id, user_id, memories)
+  count = memories[:own].length + memories[:related].length
+  personality_of(server_id, user_id)[:text].empty? ? count : count + 1
 end
 
 # What the AI suggests: { "merges" => [{ "memory_ids" => [...], "new_texts" => [...] }], "question" => "..." }
@@ -230,9 +285,9 @@ def request_tidy(client, memories, extras)
   JSON.parse(answer_text(response))
 end
 
-# What the AI needs besides the memories: what it already asked, and who it could link a name to
+# What the AI needs besides the memories: what it already asked, who it could link a name to, and the personality note
 def tidy_extras(server_id, user_id)
-  { asked: asked_questions_of(server_id, user_id), people: people_in_server(server_id) }
+  { asked: asked_questions_of(server_id, user_id), people: people_in_server(server_id), personality: personality_of(server_id, user_id) }
 end
 
 # Everyone with a note in this server, like "Minh (777)"
@@ -252,7 +307,14 @@ def tidy_input(memories, extras)
   "## This person's facts\n#{lines_or_none(own)}\n\n" \
     "## Related memories from other people (read-only)\n#{lines_or_none(related)}\n\n" \
     "## Questions you already asked this person\n#{lines_or_none(extras[:asked])}\n\n" \
-    "## People in this server\n#{lines_or_none(extras[:people])}"
+    "## People in this server\n#{lines_or_none(extras[:people])}\n\n" \
+    "## This person's personality note\n#{personality_lines_for_tidy(extras[:personality])}"
+end
+
+def personality_lines_for_tidy(personality)
+  return "(none)" if personality[:text].empty?
+
+  "Description: #{personality[:description]}\nNote: #{personality[:text]}"
 end
 
 def lines_or_none(lines)
@@ -289,6 +351,7 @@ def apply_tidy(server_id, user_id, merges)
 
     texts = new_texts_of(merge)
     replace_memory_items(server_id, items, texts)
+    log "🧹 Rewrote memory of user #{user_id}: #{items.map { |item| item[:text] }.join(' + ')} => #{texts.join(' + ')}"
     items.each { |item| available.delete(item[:id]) } # a fact can only be used in one change
     changed += items.length
     written += texts.length

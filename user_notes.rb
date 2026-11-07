@@ -12,6 +12,9 @@
 # Two writers, each with its own part:
 # - compaction rewrites "Personality" (and the description), from that person's own messages only
 # - remember_about_me adds lines to "Asked to remember"; compaction never touches them
+#
+# Personality is the bot's guess, so its owner decides: update_my_personality changes it, and
+# forget_my_personality removes it and adds a "personality_off: yes" header so compaction can't write it again.
 require_relative './memory_store'
 require_relative './notes_file'
 
@@ -30,7 +33,7 @@ def read_user_note(server_id, user_id)
   note = parse_note(text)
   personality, remembered = split_user_sections(note[:body])
   { name: note[:headers]["name"].to_s, description: note[:headers]["description"].to_s,
-    personality: personality, remembered: remembered }
+    personality: personality, remembered: remembered, personality_off: note[:headers]["personality_off"] == "yes" }
 end
 
 # Add one fact the person asked Cake to remember, with today's date.
@@ -43,12 +46,26 @@ def append_remembered_fact(server_id, user_id, name, fact, now = Time.now)
 end
 
 # Replace the Personality section and the one-line description. Remembered facts stay.
+# Does nothing if the person removed their personality note.
 def write_user_personality(server_id, user_id, name, personality, description)
   note = read_user_note(server_id, user_id) || empty_user_note
-  note[:name] = name
-  note[:personality] = without_headings(personality)
-  note[:description] = description
-  write_user_note(server_id, user_id, note)
+  return if note[:personality_off]
+
+  save_user_personality(server_id, user_id, note, name, personality, description)
+end
+
+# The person's own new version. If they had removed their note, this turns it back on.
+def change_user_personality(server_id, user_id, name, personality, description)
+  note = read_user_note(server_id, user_id) || empty_user_note
+  note[:personality_off] = false
+  save_user_personality(server_id, user_id, note, name, personality, description)
+end
+
+# Remove the note, and stop compaction from writing it again
+def remove_user_personality(server_id, user_id, name)
+  note = read_user_note(server_id, user_id) || empty_user_note
+  note[:personality_off] = true
+  save_user_personality(server_id, user_id, note, name, "", "")
 end
 
 # The line for MEMORY.md, e.g. "- users/123.md: Bach (123): likes Valorant".
@@ -63,11 +80,19 @@ end
 # --- helpers ---
 
 def empty_user_note
-  { name: "", description: "", personality: "", remembered: [] }
+  { name: "", description: "", personality: "", remembered: [], personality_off: false }
+end
+
+def save_user_personality(server_id, user_id, note, name, personality, description)
+  note[:name] = name
+  note[:personality] = without_headings(personality)
+  note[:description] = description
+  write_user_note(server_id, user_id, note)
 end
 
 def write_user_note(server_id, user_id, note)
   headers = { "name" => note[:name], "description" => note[:description] }
+  headers["personality_off"] = "yes" if note[:personality_off]
   write_memory_file(server_id, user_note_path(user_id), format_note(headers, user_note_body(note)))
 end
 

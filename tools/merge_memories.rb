@@ -45,7 +45,10 @@ def merge_memories_locked(ids, new_text, context)
   return memory_not_found(missing) if missing
 
   problem = check_merge_allowed(items, context[:requester_id])
-  return problem if problem
+  if problem
+    log_refused_memory_change("merge_memories", context, items.map { |item| item[:text] }.join(" + "))
+    return problem
+  end
 
   log "🧠 merge_memories by #{context[:requester_name]} (#{context[:requester_id]}): #{items.length} memories => #{new_text}"
   merge_memory_items(server_id, items, new_text)

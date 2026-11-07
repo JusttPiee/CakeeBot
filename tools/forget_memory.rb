@@ -26,7 +26,10 @@ def run_forget_memory(arguments, context)
   with_server_memory_lock(context[:server_id]) do
     item = find_memory_item(context[:server_id], arguments["memory_id"])
     next memory_not_found(arguments["memory_id"]) if item.nil?
-    next "Error: people can only remove what they saved or what was saved about them." unless can_remove_memory?(item, context[:requester_id])
+    unless can_remove_memory?(item, context[:requester_id])
+      log_refused_memory_change("forget_memory", context, item[:text])
+      next "Error: people can only remove what they saved or what was saved about them."
+    end
 
     log "🧠 forget_memory by #{context[:requester_name]} (#{context[:requester_id]}): #{item[:text]}"
     remove_memory_item(context[:server_id], item)

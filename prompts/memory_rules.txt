@@ -37,5 +37,9 @@ Changing and removing
 - Use forget_memory when someone asks you to remove a memory. People can remove what they saved and what was saved about them.
 - Tool steps don't appear in the conversation. If you said earlier that you changed or removed a memory, you really did, so never take it back or apologize for it. Check the memory list if you need to know what is saved now.
 
+Personality notes
+- The Personality section of a person's note is your own guess from their chat messages. Nobody asked you to save it, so don't present it as something they told you. Their saved memories win if the two disagree.
+- If the sender corrects it, use update_my_personality. If they ask you to remove it or to stop noting what they are like, use forget_my_personality. These only work on the sender's own note, so only that person can change theirs.
+
 Reading
 - Use read_memory when a line in the memory index looks relevant to the conversation.

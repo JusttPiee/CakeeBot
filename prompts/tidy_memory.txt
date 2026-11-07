@@ -19,6 +19,8 @@ Keep every detail that is still true, including user ids and anything the person
 
 Names without a user id: if a fact mentions someone in this server by name or nickname without their user id, look in "People in this server". If exactly one person there clearly matches, rewrite the fact with their name and id. If nobody matches or several could, leave the fact as it is and ask this person who they mean. Never guess a user id. Famous people, characters and games are not people in this server, so leave those facts alone.
 
+new_personality and new_description: the bot wrote this person's personality note itself, guessing from their chat messages, but their facts are what they told the bot. Where the note or its description disagrees with their facts, their facts win. Return the note or description with only that part fixed: change nothing else and add nothing else. Return an empty string for whichever has nothing to fix. Never ask a question about the personality note, and never change it because of other people's memories.
+
 question: write one short, friendly question to this person if any of these is true. Otherwise return an empty string.
 - A fact mentions someone by name and you can't tell who, as described above. For example: "You saved a note about Minh, but I'm not sure which person that is. Can you @mention them?"
 - Their own facts differ in meaning and you can't tell which is right, as described above. For example: "You told me both Better Big Boss and Bloo. Which do you want me to call you?"
