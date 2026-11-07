@@ -3,7 +3,13 @@ require_relative "../channel_reader"
 
 # Pretend Discord messages and authors (only the fields the reader uses)
 FakeAuthor  = Struct.new(:id, :display_name)
-FakeMessage = Struct.new(:author, :content, :creation_time, :id)
+FakeMessage = Struct.new(:author, :content, :creation_time, :id, :attachments, :referenced_message) do
+  def attachments = self[:attachments] || []
+  def reply? = !referenced_message.nil?
+end
+FakeImage = Struct.new(:id, :filename, :proxy_url, :url, :width, :height, :content_type) do
+  def image? = true
+end
 
 # Pretend channel: history(n) returns the newest n messages, newest first, like Discord
 FakeServer = Struct.new(:name, :id)
@@ -80,6 +86,33 @@ class ChannelReaderTest < Minitest::Test
   def test_commands_are_included
     channel = FakeChannel.new([say(PIEE, "!play")])
     assert_equal "Piee (123): !play", load_channel_history(channel, BOT_ID).first[:content]
+  end
+
+  def cat_picture
+    FakeImage.new(42, "cat.png", "https://media.discordapp.net/cat.png", "https://cdn.discordapp.com/cat.png", 800, 600, "image/png")
+  end
+
+  def test_image_only_message_is_kept_with_a_marker
+    channel = FakeChannel.new([FakeMessage.new(PIEE, "", Time.now, 1, [cat_picture])])
+    first = load_channel_history(channel, BOT_ID).first
+    assert_equal "Piee (123): [image 42: cat.png]", first[:content]
+    assert_equal "42", first[:images].first[:id]
+  end
+
+  # The bug: mention chats read the history again every time, and older replies lost who they answered
+  def test_every_reply_in_the_history_keeps_who_it_answers
+    b = FakeAuthor.new(777, "b")
+    original = FakeMessage.new(b, "", Time.now, 1, [cat_picture])
+    reply = FakeMessage.new(PIEE, "what is this", Time.now, 2, [], original)
+    follow_up = FakeMessage.new(PIEE, "who sent the pic?", Time.now, 3)
+    history = load_channel_history(FakeChannel.new([reply, follow_up]), BOT_ID)
+    assert_equal "Piee (123): what is this (replying to b (777): [image 42: cat.png])", history.first[:content]
+    assert_equal "42", history.first[:images].first[:id]
+  end
+
+  def test_the_bots_own_images_are_not_marked
+    channel = FakeChannel.new([FakeMessage.new(BOT, "here", Time.now, 1, [cat_picture])])
+    assert_equal "here", load_channel_history(channel, BOT_ID).first[:content]
   end
 
   def test_messages_without_text_are_skipped

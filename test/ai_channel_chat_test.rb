@@ -25,10 +25,14 @@ class FakeAiEvent
     @author = FakeUser.new(123, "Bach")
     @server = FakeServer.new(1, FakeBotMember.new(bot_name), "My Server")
     @channel = FakeChannel.new(555, "general")
+    @attachments = []
   end
 
+  attr_accessor :attachments, :referenced_message
+
   def bot = FakeBot.new(FakeProfile.new(999))
-  def message = self # event.message.id / .content / .reply! land here
+  def reply? = !referenced_message.nil?
+  def message = self # event.message.id / .content / .reply! / .attachments land here
   def content = @text
 
   def reply!(text, mention_user:)
@@ -38,6 +42,8 @@ class FakeAiEvent
 end
 
 class AiChannelChatTest < Minitest::Test
+  FakeUser = FakeAiEvent::FakeUser
+
   def setup
     clear_test_memory
     LOGS.clear
@@ -47,6 +53,33 @@ class AiChannelChatTest < Minitest::Test
     history = []
     answer_ai_channel_message(FakeAiEvent.new("hello", message_id: 500), FakeClient.new(answers: ["Hi!"]), history)
     assert_equal [500, 1], history.map { |m| m[:message_id] }
+  end
+
+  FakeAttachment = Struct.new(:id, :filename, :proxy_url, :url, :width, :height, :content_type) do
+    def image? = true
+  end
+
+  def cat_picture
+    FakeAttachment.new(42, "cat.png", "https://media.discordapp.net/cat.png", "https://cdn.discordapp.com/cat.png", 800, 600, "image/png")
+  end
+
+  def test_posted_image_goes_into_the_history_as_a_marker
+    history = []
+    event = FakeAiEvent.new("look")
+    event.attachments = [cat_picture]
+    answer_ai_channel_message(event, FakeClient.new(answers: ["Hi!"]), history)
+    assert_includes history.first[:content], "look [image 42: cat.png]"
+    assert_equal "42", history.first[:images].first[:id]
+  end
+
+  def test_reply_to_an_image_can_open_that_image
+    history = []
+    event = FakeAiEvent.new("what is this")
+    poster = FakeUser.new(777, "b")
+    event.referenced_message = Struct.new(:content, :attachments, :author).new("", [cat_picture], poster)
+    client = FakeClient.new(answers: ["Hi!"])
+    answer_ai_channel_message(event, client, history)
+    assert_includes client.requests.first[:input].first[:content], "(replying to b (777): [image 42: cat.png])"
   end
 
   def test_reply_is_written_to_the_log

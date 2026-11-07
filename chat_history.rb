@@ -14,9 +14,10 @@ end
 # Example: "Bach (123456789): hello"
 # `time` is when it was sent; the "[2026-11-04 14:02]" marker is added when sending to OpenAI.
 # user_id, name and message_id (the Discord message) are kept for compaction and long-term memory.
-def add_user_message(history, name, user_id, text, time = Time.now, message_id: nil)
+# images: pictures in this message that look_at_image can open (see image_attachments.rb). Never sent as text.
+def add_user_message(history, name, user_id, text, time = Time.now, message_id: nil, images: [])
   history << { role: "user", content: "#{name} (#{user_id}): #{text}", time: time,
-               user_id: user_id.to_s, name: name, message_id: message_id }
+               user_id: user_id.to_s, name: name, message_id: message_id, images: images }
 end
 
 # message_id: the Discord message Cake sent (the last one, if the reply was split)

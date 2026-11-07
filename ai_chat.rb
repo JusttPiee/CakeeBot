@@ -72,6 +72,7 @@ end
 # context: facts from Discord for memory and tools { server_id:, channel_id:, requester_id:, requester_name: }
 # If the model used the whole budget on thinking and the answer is empty, try once more without thinking.
 def ask_ai(client, history, bot_name, context = {})
+  context = context.merge(images: images_in_history(history), pending_images: [], image_looks: 0)
   memory = load_prompt_memory(context)
   answer = request_answer(client, history, bot_name, OPENAI_REASONING_EFFORT, memory, context)
   return answer if answer.nil? || !answer.strip.empty? # an API error, or a real answer
@@ -98,6 +99,7 @@ def request_answer(client, history, bot_name, reasoning_effort, memory = {}, con
 
     input.concat(response["output"].to_a) # thinking (locked) + tool requests, sent back as they came
     input.concat(run_tool_calls(tool_calls, context))
+    input.concat(take_pending_images(context)) # pictures opened with look_at_image
   end
 
   log "⚠️ Used all #{MAX_TOOL_ROUNDS} tool rounds, asking for an answer without more tools"

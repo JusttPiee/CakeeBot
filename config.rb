@@ -55,3 +55,11 @@ REMEMBER_FACT_MAX_CHARS = 500
 MAX_TOOL_ROUNDS = 7
 SEARCH_MAX_RESULTS = 5 # results per web_search
 WEBPAGE_MAX_CHARS = 8_000 # read_webpage gives the AI at most this much text (about 2,000 tokens)
+
+# look_at_image: pictures are scaled so the longest side is at most this (about 1,200 tokens per picture)
+IMAGE_MAX_SIDE = 1024
+IMAGE_MAX_BYTES = 10_000_000 # bigger downloads are refused
+IMAGE_MAX_PER_REPLY = 3 # keeps the cost of one reply small
+
+# A reply shows who it answers and this much of that message's text
+REPLY_QUOTE_MAX_CHARS = 100

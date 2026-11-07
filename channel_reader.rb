@@ -4,6 +4,7 @@
 require_relative './chat_history'
 require_relative './channel_lock'
 require_relative './channel_summary'
+require_relative './image_attachments'
 
 # On startup: for every channel where AI mode was on (saved in ai_config.txt), load its
 # recent messages again, so the AI remembers the conversations from before the restart.
@@ -69,14 +70,16 @@ end
 def build_history_from_messages(messages, bot_id, max_messages: MAX_HISTORY_MESSAGES, max_tokens: MAX_HISTORY_TOKENS)
   history = []
   messages.reverse.each do |message| # oldest first, like a normal conversation
-    text = message.content.to_s.strip
-    next if text.empty? # pictures, stickers or embeds only: no text to give the AI
+    from_bot = message.author.id == bot_id
+    text = from_bot ? message.content.to_s.strip : text_with_image_markers(message)
+    next if text.empty? # stickers or embeds only: nothing to give the AI
 
-    if message.author.id == bot_id
+    if from_bot
       add_assistant_message(history, text, message_id: message.id)
     else
       add_user_message(history, message.author.display_name, message.author.id, text, message.creation_time,
-                       message_id: message.id)
+                       message_id: message.id, images: images_from_message(message))
+      add_reply_note(history.last, message)
     end
   end
   trim_history(history, max_messages, max_tokens) # the size limits still apply

@@ -7,6 +7,7 @@ require_relative './tools/read_webpage'
 require_relative './tools/read_memory'
 require_relative './tools/save_event'
 require_relative './tools/remember_about_me'
+require_relative './tools/look_at_image'
 
 # name => { definition: what the AI sees, run: the Ruby method that does the work }
 def available_tools
@@ -16,6 +17,7 @@ def available_tools
   tools["read_memory"] = { definition: READ_MEMORY_DEFINITION, run: method(:run_read_memory) }
   tools["save_event"] = { definition: SAVE_EVENT_DEFINITION, run: method(:run_save_event) }
   tools["remember_about_me"] = { definition: REMEMBER_ABOUT_ME_DEFINITION, run: method(:run_remember_about_me) }
+  tools["look_at_image"] = { definition: LOOK_AT_IMAGE_DEFINITION, run: method(:run_look_at_image) }
   tools
 end
 

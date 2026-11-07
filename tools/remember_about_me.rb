@@ -9,9 +9,10 @@ REMEMBER_ABOUT_ME_DEFINITION = {
   type: "function",
   name: "remember_about_me",
   description: "Save a fact about the person who sent the latest message (their habits, likes, dislikes, " \
-               "how they want to be treated). Use it when they ask you to remember something about themselves, " \
-               "or when they correct you or are annoyed that you got their preference or habit wrong, even if " \
-               "they don't say 'remember'. It always saves to the sender's own notes. Never use it for facts " \
+               "how they want you to act or talk to them). Use it when they ask you to remember something about " \
+               "themselves, tell you how they want you to act, or correct you or are annoyed that you got their " \
+               "preference or habit wrong, even if they don't say 'remember'. Use it before promising to act " \
+               "differently from now on. It always saves to the sender's own notes. Never use it for facts " \
                "about other people: if someone asks you to remember something about another person, say you can't.",
   parameters: {
     type: "object",

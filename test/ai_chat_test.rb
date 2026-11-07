@@ -63,6 +63,17 @@ class AiChatTest < Minitest::Test
     refute_includes prompt, "{bot_name}"
   end
 
+  # The bug: the bot said "got it" to "don't guess confidently" and saved nothing
+  def test_rules_forbid_promising_without_saving
+    prompt = build_system_prompt("Mochi")
+    assert_includes prompt, "tells you how they want you to act"
+    assert_includes prompt, "Never promise"
+  end
+
+  def test_remember_tool_covers_instructions_about_behavior
+    assert_includes REMEMBER_ABOUT_ME_DEFINITION[:description], "how they want you to act"
+  end
+
   def test_chat_rules_are_always_included
     assert_includes build_system_prompt("Mochi"), "Nickname (user_id)"
   end
