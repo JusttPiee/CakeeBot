@@ -18,5 +18,8 @@ if errorlevel 1 (
 )
 
 rem Run with the exact gem versions from Gemfile.lock
+:run
 call bundle exec ruby cakee.rb
+rem Exit code 42 means /restart was typed in the terminal (see terminal_commands.rb)
+if %errorlevel%==42 goto run
 pause

@@ -40,6 +40,7 @@ require_relative './channel_lock' # One lock per channel so messages are handled
 require_relative './channel_reader' # Load recent channel messages when AI mode is turned on
 require_relative './mention_chat' # Answer when @mentioned in any channel
 require_relative './ai_channel_chat' # Answer in AI channels, with long-term memory and compaction
+require_relative './terminal_commands' # Commands typed in the terminal, like /restart
 
 # Read a required secret. If it is missing, ask for it once in the terminal and save it to .env,
 # so first-time setup is just: run the bot and paste your keys.
@@ -516,6 +517,8 @@ end
 bot.disconnected do
   log "🔌 Disconnected from Discord (it will try to reconnect automatically)"
 end
+
+start_terminal_commands(terminal_commands(bot))
 
 log "⏳ Connecting to Discord..."
 bot.run

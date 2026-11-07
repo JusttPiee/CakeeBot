@@ -142,6 +142,14 @@ To change a key, edit it in `.env`, or clear its value (leave `KEY=` empty) and 
 | `prompts/chat_rules.txt` | Technical rules the code depends on, like the message format. Restart the bot to apply changes |
 | `prompts/compaction.txt` | Instructions for summarizing old messages into long-term memory. Restart the bot to apply changes |
 
+### Terminal commands
+
+Type these in the terminal where the bot is running:
+
+| Command | What it does |
+|---|---|
+| `/restart` | Restarts the bot, reloading the code and prompts. It only starts again by itself if you launched it with `start.bat` |
+
 ### Running tests
 
 The tests don't connect to Discord or OpenAI, so they're free and take about a second:
