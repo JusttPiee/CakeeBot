@@ -1,0 +1,10 @@
+## A question you asked the sender, still not settled
+You asked them: "{question}"
+
+If their latest message answers it, even with one word, settle it in this same reply, before you write your answer:
+- The sender must end up with one memory of their own that says the answer. If they already have one, keep it. If not, use update_memory to change their own wrong memory into the answer. Keep it short and written about the sender, without "why" or "how".
+- Use forget_memory on any other memory of theirs the answer shows is wrong.
+- Use forget_memory on a memory someone else saved only if the answer shows it is wrong. You are allowed to when it is about the sender. If it agrees with the answer, leave it alone.
+- Don't save a new memory for the answer, and never say you got it unless you used these tools or nothing needed to change.
+
+If their latest message is about something else, ignore this and answer it normally.

@@ -8,6 +8,10 @@ require_relative './tools/read_memory'
 require_relative './tools/save_event'
 require_relative './tools/remember_about_me'
 require_relative './tools/look_at_image'
+require_relative './tools/remember_about_someone'
+require_relative './tools/update_memory'
+require_relative './tools/forget_memory'
+require_relative './tools/merge_memories'
 
 # name => { definition: what the AI sees, run: the Ruby method that does the work }
 def available_tools
@@ -18,6 +22,10 @@ def available_tools
   tools["save_event"] = { definition: SAVE_EVENT_DEFINITION, run: method(:run_save_event) }
   tools["remember_about_me"] = { definition: REMEMBER_ABOUT_ME_DEFINITION, run: method(:run_remember_about_me) }
   tools["look_at_image"] = { definition: LOOK_AT_IMAGE_DEFINITION, run: method(:run_look_at_image) }
+  tools["remember_about_someone"] = { definition: REMEMBER_ABOUT_SOMEONE_DEFINITION, run: method(:run_remember_about_someone) }
+  tools["update_memory"] = { definition: UPDATE_MEMORY_DEFINITION, run: method(:run_update_memory) }
+  tools["forget_memory"] = { definition: FORGET_MEMORY_DEFINITION, run: method(:run_forget_memory) }
+  tools["merge_memories"] = { definition: MERGE_MEMORIES_DEFINITION, run: method(:run_merge_memories) }
   tools
 end
 

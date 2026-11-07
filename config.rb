@@ -49,6 +49,12 @@ HARD_MAX_HISTORY_TOKENS = 7_500
 MEMORY_PROMPT_MAX_CHARS = 8_000
 # Longest fact remember_about_me accepts
 REMEMBER_FACT_MAX_CHARS = 500
+# After a reply, the sender's facts are checked for overlaps if they have at least this many (see memory_tidy.rb)
+MEMORY_TIDY_MIN_FACTS = 2
+MEMORY_TIDY_MAX_NEW_FACTS = 5 # one change can't turn into more facts than this
+MEMORY_CHECK_RETRY_SECONDS = 3600 # after a failed conflict check, wait this long before trying that person again
+OPEN_QUESTION_MAX_MESSAGES = 3 # the AI is reminded of a memory question for this many messages from that person
+ASKED_QUESTIONS_KEPT = 5 # tidying is told this many of a person's past questions, so it doesn't repeat them
 
 # Tools (web search, reading pages). One "round" = the AI asks for tools, we run them, send results back.
 # After this many rounds the AI must answer, so it can never loop forever.

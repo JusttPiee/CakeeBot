@@ -82,6 +82,48 @@ class AiChannelChatTest < Minitest::Test
     assert_includes client.requests.first[:input].first[:content], "(replying to b (777): [image 42: cat.png])"
   end
 
+  def test_the_senders_memory_is_tidied_after_the_reply
+    append_remembered_fact(1, 123, "Bach", "call me Boss")
+    append_remembered_fact(1, 123, "Bach", "please call me Boss")
+    ids = personal_memory_items(1).map { |item| item[:id] }
+    tidy_answer = { merges: [{ memory_ids: ids, new_texts: ["call me Boss"] }] }.to_json
+    answer_ai_channel_message(FakeAiEvent.new("hello"), FakeClient.new(answers: ["Hi!", tidy_answer]), [])
+    assert_equal 1, read_user_note(1, 123)[:remembered].length
+  end
+
+  def test_a_memory_conflict_is_asked_in_the_channel
+    append_remembered_fact(1, 123, "Bach", "call me Small Boss")
+    append_remembered_fact(1, 456, "Pie", "user 123 prefers Big Boss")
+    tidy_answer = { merges: [], question: "Pie saved Big Boss, you said Small Boss. Which is right?" }.to_json
+    event = FakeAiEvent.new("hello")
+    history = []
+    answer_ai_channel_message(event, FakeClient.new(answers: ["Hi!", tidy_answer]), history)
+    assert_equal ["Hi!", "Pie saved Big Boss, you said Small Boss. Which is right?"], event.sent.map { |sent| sent[:text] }
+    assert_includes history.last[:content], "Which is right?"
+    assert_equal "assistant", history.last[:role]
+  end
+
+  def test_a_waiting_question_is_asked_after_the_reply
+    save_pending_question(1, 123, "Better Big Boss or Bloo?")
+    event = FakeAiEvent.new("hello")
+    answer_ai_channel_message(event, FakeClient.new(answers: ["Hi!"]), [])
+    assert_equal ["Hi!", "Better Big Boss or Bloo?"], event.sent.map { |sent| sent[:text] }
+    assert_nil take_pending_question(1, 123)
+  end
+
+  def test_replying_remembers_the_channel_for_later_questions
+    answer_ai_channel_message(FakeAiEvent.new("hello"), FakeClient.new(answers: ["Hi!"]), [])
+    assert_equal 555, last_channel_of(1, 123)
+  end
+
+  def test_no_conflict_sends_only_the_reply
+    append_remembered_fact(1, 123, "Bach", "a")
+    append_remembered_fact(1, 123, "Bach", "b")
+    event = FakeAiEvent.new("hello")
+    answer_ai_channel_message(event, FakeClient.new(answers: ["Hi!", { merges: [], question: "" }.to_json]), [])
+    assert_equal ["Hi!"], event.sent.map { |sent| sent[:text] }
+  end
+
   def test_reply_is_written_to_the_log
     answer_ai_channel_message(FakeAiEvent.new("hello"), FakeClient.new(answers: ["A reply to find in the log"]), [])
     logged = Dir.glob(File.join(MESSAGE_LOG_DIR, "**", "*.log")).map { |path| File.read(path) }.join

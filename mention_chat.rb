@@ -6,6 +6,7 @@ require_relative './channel_reader'
 require_relative './channel_lock'
 require_relative './ai_chat'
 require_relative './message_logger'
+require_relative './memory_tidy'
 
 # true if the message @mentions the bot, or is a reply to one of the bot's messages.
 # @everyone / @here are not counted: Discord does not put the bot in `mentions` for those.
@@ -38,6 +39,7 @@ def answer_mention(event, client)
     else
       send_reply(event, answer)
       log_bot_reply(event, answer)
+      tidy_and_ask(event, client)
     end
   end
 end

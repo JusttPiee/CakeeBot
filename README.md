@@ -140,7 +140,10 @@ To change a key, edit it in `.env`, or clear its value (leave `KEY=` empty) and 
 | `prompts/personality.txt` | Created automatically from `personality.default.txt` and not tracked by git. The AI's identity and tone. Edit freely; `{bot_name}` becomes your bot's name. Changes apply on the next message |
 | `prompts/capabilities.txt` | The commands and abilities the AI knows about. Update it when you add a command. Restart the bot to apply changes |
 | `prompts/chat_rules.txt` | Technical rules the code depends on, like the message format. Restart the bot to apply changes |
+| `prompts/memory_rules.txt` | When and how the AI saves, changes and removes memories. Restart the bot to apply changes |
 | `prompts/compaction.txt` | Instructions for summarizing old messages into long-term memory. Restart the bot to apply changes |
+| `prompts/tidy_memory.txt` | Instructions for merging overlapping memories and spotting conflicts. Restart the bot to apply changes |
+| `prompts/open_question.txt` | What the AI does when someone answers a question about their memory. Restart the bot to apply changes |
 
 ### Terminal commands
 

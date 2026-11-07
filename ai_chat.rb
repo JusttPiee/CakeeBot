@@ -7,6 +7,7 @@ require_relative './message_splitter'
 require_relative './tool_list'
 require_relative './memory_index'
 require_relative './channel_summary'
+require_relative './memory_questions'
 
 # The bot's personality: who it is and how it talks. Edit prompts/personality.txt to change it, no code needed.
 # {bot_name} is replaced with the bot's name in the server. Changes apply on the next message, no restart.
@@ -17,6 +18,7 @@ PERSONALITY_FILE = File.join(PROMPTS_DIR, 'personality.txt')
 # and new commands reach every bot. Loaded once, at startup.
 CAPABILITIES = read_prompt("capabilities")
 CHAT_RULES = read_prompt("chat_rules")
+MEMORY_RULES = read_prompt("memory_rules")
 
 def default_personality
   read_prompt("personality.default")
@@ -33,14 +35,15 @@ def load_personality(path = PERSONALITY_FILE)
   text.empty? ? default_personality : text
 end
 
-# Final system prompt = personality (with the bot's name filled in) + capabilities + technical rules + today's date,
-# then the server's memory index and this channel's summary (when there are any).
+# Final system prompt = personality (with the bot's name filled in) + capabilities + technical rules + memory rules + today's date,
+# then the server's memory index, this channel's summary and any open memory question (when there are any).
 # The parts that change least come first, so OpenAI can cache the start of the prompt.
-def build_system_prompt(bot_name, memory_index: "", channel_summary: "")
+def build_system_prompt(bot_name, memory_index: "", channel_summary: "", open_question: "")
   personality = load_personality.gsub("{bot_name}", bot_name)
-  prompt = "#{personality}\n\n#{CAPABILITIES}\n\n#{CHAT_RULES}\n\nToday's date is #{Date.today.strftime('%A, %d %B %Y')}."
+  prompt = "#{personality}\n\n#{CAPABILITIES}\n\n#{CHAT_RULES}\n\n#{MEMORY_RULES}\n\nToday's date is #{Date.today.strftime('%A, %d %B %Y')}."
   prompt += "\n\n## Long-term memory (index of saved notes)\n#{memory_index}" unless memory_index.empty?
   prompt += "\n\n## Summary of earlier conversation in this channel\n#{channel_summary}" unless channel_summary.empty?
+  prompt += "\n\n#{open_question}" unless open_question.empty?
   prompt
 end
 
@@ -57,6 +60,7 @@ def load_prompt_memory(context)
     summary = read_channel_summary(server_id, context[:channel_id])[:text]
     memory[:channel_summary] = cap_for_prompt(summary, "Channel summary")
   end
+  memory[:open_question] = open_question_prompt(server_id, context[:requester_id])
   memory
 end
 

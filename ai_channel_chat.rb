@@ -10,6 +10,7 @@ require_relative './ai_chat'
 require_relative './compaction'
 require_relative './message_logger'
 require_relative './image_attachments'
+require_relative './memory_tidy'
 
 AI_UNAVAILABLE_MESSAGE = "⚠️ My AI brain is unavailable right now. Please try again later."
 
@@ -33,6 +34,7 @@ def answer_ai_channel_message(event, client, history)
   sent = send_reply(event, answer) # Splits replies over Discord's 2000-character limit
   log_bot_reply(event, answer)
   add_assistant_message(history, answer, message_id: sent&.id)
+  tidy_and_ask(event, client, history)
   compact_history(client, history, event.server.id, event.channel.id, bot_name) if needs_compaction?(history)
 end
 

@@ -512,6 +512,7 @@ ensure_personality_file # so it exists to edit from the first run, before anyone
 bot.ready do |event|
   log "🤖 Cake is alive! Logged in as #{event.bot.profile.distinct} in #{event.bot.servers.size} server(s)"
   restore_ai_memory(event.bot, bot_state[:histories], load_ai_channels(ai_config_path)) # remember the AI chats after a restart
+  start_memory_tidy_once(client, event.bot, bot_state[:histories]) # here, because sending memory questions needs the connection
 end
 
 bot.disconnected do

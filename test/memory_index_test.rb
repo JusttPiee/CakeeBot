@@ -39,7 +39,9 @@ class MemoryIndexTest < Minitest::Test
 
   def test_only_people_and_no_events
     append_remembered_fact(1, 123, "Bach", "likes pho")
-    assert_equal "## People\n- users/123.md: Bach (123): likes pho\n", rebuild_memory_index(1, NOW)
+    text = rebuild_memory_index(1, NOW)
+    assert text.start_with?("## People\n- users/123.md: Bach (123): likes pho\n")
+    refute_includes text, "Upcoming events"
   end
 
   def test_note_with_a_bad_file_name_is_skipped

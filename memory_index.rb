@@ -8,10 +8,17 @@
 #   ## People
 #   - users/123.md: Bach (123): likes Valorant
 #
+#   ## What people asked you to remember
+#   - [a1b2c3d4] Bach (123): call me Boss (2026-11-07)
+#
+#   ## What people said about others (their opinions, not facts)
+#   - [e5f6a7b8] Bach (123) says about Pie (456): is bad at Valorant (2026-11-07)
+#
 # Callers hold with_server_memory_lock; this file does not lock by itself.
 require_relative './memory_store'
 require_relative './user_notes'
 require_relative './event_notes'
+require_relative './memory_items'
 
 MEMORY_INDEX_PATH = "MEMORY.md"
 
@@ -21,6 +28,8 @@ def rebuild_memory_index(server_id, now = Time.now)
   sections = []
   sections << index_section("## Upcoming events", upcoming_event_lines(server_id, now))
   sections << index_section("## People", people_lines(server_id))
+  sections << index_section("## What people asked you to remember", personal_memory_items(server_id).map { |item| personal_item_line(item) })
+  sections << index_section("## What people said about others (their opinions, not facts)", general_memory_items(server_id).map { |item| general_item_line(item) })
   text = sections.compact.join("\n")
   save_memory_index(server_id, text)
   text
@@ -46,6 +55,19 @@ def people_lines(server_id)
     note = read_user_note(server_id, user_id)
     user_index_line(user_id, note) if note # nil = a file name that isn't allowed (e.g. made by hand)
   end
+end
+
+def personal_item_line(item)
+  who = item[:owner_name].to_s.empty? ? "(#{item[:owner_id]})" : "#{item[:owner_name]} (#{item[:owner_id]})"
+  "- [#{item[:id]}] #{who}: #{item[:text]}#{item_date_suffix(item)}"
+end
+
+def general_item_line(item)
+  "- [#{item[:id]}] #{item[:author_name]} (#{item[:author_id]}) says about #{item[:subject_name]} (#{item[:subject_id]}): #{item[:text]}#{item_date_suffix(item)}"
+end
+
+def item_date_suffix(item)
+  item[:date] ? " (#{item[:date]})" : ""
 end
 
 # Don't create a folder for a server that has never saved anything
