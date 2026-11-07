@@ -7,6 +7,9 @@
 ai_config.txt
 memory/
 
+# Each bot's own personality (created from prompts/personality.default.txt if missing)
+prompts/personality.txt
+
 # Ruby / Bundler
 .bundle/
 vendor/bundle/

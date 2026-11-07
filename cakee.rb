@@ -505,6 +505,8 @@ end
 
 word_chain_game(bot) #preload the word chain game function
 
+ensure_personality_file # so it exists to edit from the first run, before anyone chats
+
 # Only announce we're alive once Discord has actually accepted the token and connected
 bot.ready do |event|
   log "🤖 Cake is alive! Logged in as #{event.bot.profile.distinct} in #{event.bot.servers.size} server(s)"

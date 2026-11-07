@@ -23,6 +23,13 @@ class CompactionTest < Minitest::Test
     history
   end
 
+  def test_instructions_use_the_bots_name
+    instructions = compaction_parameters("x", "Mochi")[:instructions]
+    assert_includes instructions, "Discord bot called Mochi"
+    refute_includes instructions, "{bot_name}"
+    refute_includes instructions, "Cake"
+  end
+
   def result(personalities: [], events: [])
     { summary: "They chatted.", events: events, user_personalities: personalities }.to_json
   end
@@ -50,7 +57,7 @@ class CompactionTest < Minitest::Test
 
   def test_compaction_shrinks_history_to_the_low_mark_and_saves_the_summary
     history = chat(23)
-    assert compact_history(FakeClient.new(answers: [result]), history, 1, 555)
+    assert compact_history(FakeClient.new(answers: [result]), history, 1, 555, "Mochi")
     assert history.length <= COMPACT_TARGET_MESSAGES
     summary = read_channel_summary(1, 555)
     assert_equal "They chatted.", summary[:text]
@@ -59,7 +66,7 @@ class CompactionTest < Minitest::Test
 
   def test_one_request_per_compaction
     client = FakeClient.new(answers: [result])
-    compact_history(client, chat(23), 1, 555)
+    compact_history(client, chat(23), 1, 555, "Mochi")
     assert_equal 1, client.requests.length
     request = client.requests.first
     assert_equal false, request[:store]
@@ -69,60 +76,60 @@ class CompactionTest < Minitest::Test
   def test_request_contains_old_messages_and_current_summary
     write_channel_summary(1, 555, "Earlier they planned a trip.", 0)
     client = FakeClient.new(answers: [result])
-    compact_history(client, chat(23), 1, 555)
+    compact_history(client, chat(23), 1, 555, "Mochi")
     sent = client.requests.first[:input].first[:content]
     assert_includes sent, "Earlier they planned a trip."
     assert_includes sent, "Bach (123): message 0"
-    assert_includes sent, "Cake: reply 0"
+    assert_includes sent, "Mochi: reply 0"
   end
 
   def test_personality_only_for_people_who_spoke
     bob = { user_id: "456", name: "Bob", personality: "Bad.", description: "bad" }
-    compact_history(FakeClient.new(answers: [result(personalities: [bach, bob])]), chat(23), 1, 555)
+    compact_history(FakeClient.new(answers: [result(personalities: [bach, bob])]), chat(23), 1, 555, "Mochi")
     assert_equal "Chatty.", read_user_note(1, 123)[:personality]
     assert_nil read_user_note(1, 456)
   end
 
   def test_compaction_keeps_remembered_facts
     append_remembered_fact(1, 123, "Bach", "likes pho")
-    compact_history(FakeClient.new(answers: [result(personalities: [bach])]), chat(23), 1, 555)
+    compact_history(FakeClient.new(answers: [result(personalities: [bach])]), chat(23), 1, 555, "Mochi")
     assert_equal 1, read_user_note(1, 123)[:remembered].length
   end
 
   def test_invalid_event_from_model_is_skipped
     events = [{ title: "Party", when: "soon", details: "" }, { title: "Cup", when: "2099-01-02", details: "" }]
-    compact_history(FakeClient.new(answers: [result(events: events)]), chat(23), 1, 555)
+    compact_history(FakeClient.new(answers: [result(events: events)]), chat(23), 1, 555, "Mochi")
     assert_equal ["Cup"], list_event_notes(1).map { |event| event[:title] }
   end
 
   def test_index_is_rebuilt
-    compact_history(FakeClient.new(answers: [result(personalities: [bach])]), chat(23), 1, 555)
+    compact_history(FakeClient.new(answers: [result(personalities: [bach])]), chat(23), 1, 555, "Mochi")
     assert_includes read_memory_file(1, "MEMORY.md"), "Bach (123): chatty"
   end
 
   def test_failure_keeps_history_and_logs
     history = chat(23)
-    refute compact_history(FakeClient.new(error: Faraday::ConnectionFailed.new("down")), history, 1, 555)
+    refute compact_history(FakeClient.new(error: Faraday::ConnectionFailed.new("down")), history, 1, 555, "Mochi")
     assert_equal 46, history.length
     assert_includes LOGS.last, "Compaction failed"
   end
 
   def test_bad_json_is_a_failure
     history = chat(23)
-    refute compact_history(FakeClient.new(answers: ["not json"]), history, 1, 555)
+    refute compact_history(FakeClient.new(answers: ["not json"]), history, 1, 555, "Mochi")
     assert_equal 46, history.length
   end
 
   def test_json_without_a_summary_is_a_failure
     history = chat(23)
-    refute compact_history(FakeClient.new(answers: ['{"events":[]}']), history, 1, 555)
+    refute compact_history(FakeClient.new(answers: ['{"events":[]}']), history, 1, 555, "Mochi")
     assert_equal 46, history.length
   end
 
   def test_missing_ids_keep_previous_summary_id
     write_channel_summary(1, 555, "old", 7)
     history = chat(23).each { |message| message[:message_id] = nil }
-    compact_history(FakeClient.new(answers: [result]), history, 1, 555)
+    compact_history(FakeClient.new(answers: [result]), history, 1, 555, "Mochi")
     assert_equal 7, read_channel_summary(1, 555)[:last_message_id]
   end
 end

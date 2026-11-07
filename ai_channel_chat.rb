@@ -18,7 +18,8 @@ def answer_ai_channel_message(event, client, history)
   trim_history(history, HARD_MAX_HISTORY_MESSAGES, HARD_MAX_HISTORY_TOKENS)
 
   event.channel.start_typing # Show "Cake is typing..." while waiting for OpenAI
-  answer = ask_ai(client, history, event.server.bot.display_name, ai_channel_context(event))
+  bot_name = event.server.bot.display_name
+  answer = ask_ai(client, history, bot_name, ai_channel_context(event))
 
   if answer.nil? || answer.strip.empty?
     remove_last_message(history) # Don't keep a question that never got an answer
@@ -28,7 +29,7 @@ def answer_ai_channel_message(event, client, history)
 
   sent = send_reply(event, answer) # Splits replies over Discord's 2000-character limit
   add_assistant_message(history, answer, message_id: sent&.id)
-  compact_history(client, history, event.server.id, event.channel.id) if needs_compaction?(history)
+  compact_history(client, history, event.server.id, event.channel.id, bot_name) if needs_compaction?(history)
 end
 
 # Facts from Discord for memory and tools. The AI never chooses these.

@@ -137,7 +137,10 @@ To change a key, edit it in `.env`, or clear its value (leave `KEY=` empty) and 
 | `.env` | Your secret keys. **Never share or commit this file**; it's already in `.gitignore` |
 | `badwords.txt` | The bad words list, one word per line. You can edit it by hand or with `!badword` |
 | `ai_config.txt` | Created automatically. Remembers which channel has AI chat on |
-| `prompts/personality.txt` | The AI's personality: who it is and what it can do. Edit freely; `{bot_name}` becomes your bot's name. Changes apply on the next message |
+| `prompts/personality.txt` | Created automatically from `personality.default.txt` and not tracked by git. The AI's identity and tone. Edit freely; `{bot_name}` becomes your bot's name. Changes apply on the next message |
+| `prompts/capabilities.txt` | The commands and abilities the AI knows about. Update it when you add a command. Restart the bot to apply changes |
+| `prompts/chat_rules.txt` | Technical rules the code depends on, like the message format. Restart the bot to apply changes |
+| `prompts/compaction.txt` | Instructions for summarizing old messages into long-term memory. Restart the bot to apply changes |
 
 ### Running tests
 

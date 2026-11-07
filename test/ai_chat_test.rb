@@ -76,19 +76,47 @@ class AiChatTest < Minitest::Test
   end
 
   def test_missing_personality_file_uses_default
-    assert_equal DEFAULT_PERSONALITY, load_personality("no/such/file.txt")
+    Dir.mktmpdir do |dir|
+      assert_equal default_personality, load_personality(File.join(dir, "personality.txt"))
+    end
+  end
+
+  def test_missing_personality_file_is_generated
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, "personality.txt")
+      ensure_personality_file(path)
+      assert_equal default_personality, File.read(path).strip
+    end
+  end
+
+  def test_existing_personality_file_is_not_overwritten
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, "personality.txt")
+      File.write(path, "You are {bot_name}, a pirate.")
+      ensure_personality_file(path)
+      assert_equal "You are {bot_name}, a pirate.", File.read(path)
+    end
   end
 
   def test_empty_personality_file_uses_default
     Dir.mktmpdir do |dir|
       path = File.join(dir, "personality.txt")
       File.write(path, "  \n") # only spaces and a blank line
-      assert_equal DEFAULT_PERSONALITY, load_personality(path)
+      assert_equal default_personality, load_personality(path)
     end
   end
 
-  def test_shipped_personality_file_uses_the_name_placeholder
-    assert_includes load_personality, "{bot_name}"
+  def test_default_personality_uses_the_name_placeholder
+    assert_includes default_personality, "{bot_name}"
+  end
+
+  # The command list lives in capabilities.txt, so it can't go stale in someone's local personality file
+  def test_default_personality_has_no_command_list
+    refute_includes default_personality, "!help"
+  end
+
+  def test_capabilities_are_always_included
+    assert_includes build_system_prompt("Mochi"), "!help"
   end
 
   # --- Asking OpenAI ---

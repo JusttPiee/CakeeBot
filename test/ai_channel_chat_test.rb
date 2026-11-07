@@ -16,12 +16,12 @@ class FakeAiEvent
 
   attr_reader :sent, :author, :server, :channel, :id
 
-  def initialize(text, message_id: 500)
+  def initialize(text, message_id: 500, bot_name: "Cake")
     @text = text
     @id = message_id
     @sent = []
     @author = FakeUser.new(123, "Bach")
-    @server = FakeServer.new(1, FakeBotMember.new("Cake"))
+    @server = FakeServer.new(1, FakeBotMember.new(bot_name))
     @channel = FakeChannel.new(555)
   end
 
@@ -53,6 +53,14 @@ class AiChannelChatTest < Minitest::Test
     answer_ai_channel_message(FakeAiEvent.new("one more", message_id: 99), client, history)
     assert_equal 2, client.requests.length
     assert history.length <= COMPACT_TARGET_MESSAGES
+  end
+
+  def test_compaction_uses_the_bots_name_in_this_server
+    history = []
+    44.times { |i| add_user_message(history, "Bach", 123, "m#{i}", Time.now, message_id: i + 1) }
+    client = FakeClient.new(answers: ["Hi!", { summary: "s", events: [], user_personalities: [] }.to_json])
+    answer_ai_channel_message(FakeAiEvent.new("one more", message_id: 99, bot_name: "Mochi"), client, history)
+    assert_includes client.requests.last[:instructions], "Discord bot called Mochi"
   end
 
   def test_no_compaction_when_history_is_small
