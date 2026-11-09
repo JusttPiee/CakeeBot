@@ -37,6 +37,17 @@ def last_channel_of(server_id, user_id)
   tidy_state_of(server_id, user_id)["channel"]
 end
 
+# Forget everything tidying knew about this person (used by !forgetme)
+def forget_tidy_state(server_id, user_id)
+  with_server_memory_lock(server_id) do
+    state = read_tidy_state(server_id)
+    next unless state.key?(user_id.to_s)
+
+    state.delete(user_id.to_s)
+    write_memory_file(server_id, TIDY_STATE_PATH, JSON.pretty_generate(state))
+  end
+end
+
 # --- helpers ---
 
 # Only changed by the code, but a broken file must not stop the bot: it just means starting over

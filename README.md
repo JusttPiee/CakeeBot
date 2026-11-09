@@ -22,6 +22,7 @@ A multifunctional Discord bot written in Ruby. It can:
 | `!badword list` | Admins | Shows the list |
 | `!neuronactivate` | Admins | Turns on AI chat in the current channel |
 | `!neurondeactivate` | Admins | Turns off AI chat |
+| `!forgetme` | Everyone | Shows what the bot remembers about you; `!forgetme confirm` deletes all of it in that server |
 
 **Word chain rules:** each word must be a real English word, can't be reused, and must start with the last letter of the previous word. The same person can't go twice in a row. After 3 wrong attempts, the game ends and the last player with a valid word wins.
 
@@ -30,6 +31,8 @@ A multifunctional Discord bot written in Ruby. It can:
 **Mentions:** in any channel, `@Cake` or a reply to one of Cake's messages gets an AI answer. Each time, Cake reads that channel's last 45 messages as context.
 
 **Checking old messages:** when someone says what another person said earlier, Cake can read back through the last 500 messages of the current channel (`search_channel_history`) and quote the real message with a link. For older things it jumps straight to a date, even years back ("what did Pie say in March 2022?"), or to the very first messages of the channel. It never reads other channels this way, and it saves nothing.
+
+**`!forgetme`:** removes everything Cake remembers about you in that server: your note, what you asked it to remember, and notes from or about you. After that Cake won't write a new personality note about you, unless you ask it to. Channel summaries and events are kept.
 
 ---
 

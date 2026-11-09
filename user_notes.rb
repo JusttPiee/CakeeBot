@@ -77,6 +77,12 @@ def user_index_line(user_id, note)
   about.to_s.empty? ? line : "#{line}: #{about}"
 end
 
+# A note with nothing in it, like the one !forgetme leaves (only "personality_off: yes").
+# It is not shown in MEMORY.md, because there is nobody to remember.
+def blank_user_note?(note)
+  note[:name].to_s.empty? && note[:description].to_s.empty? && note[:personality].to_s.empty? && note[:remembered].empty?
+end
+
 # --- helpers ---
 
 def empty_user_note

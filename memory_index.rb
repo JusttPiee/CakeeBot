@@ -53,7 +53,9 @@ def people_lines(server_id)
   list_memory_files(server_id, "users").filter_map do |path|
     user_id = File.basename(path, ".md")
     note = read_user_note(server_id, user_id)
-    user_index_line(user_id, note) if note # nil = a file name that isn't allowed (e.g. made by hand)
+    next if note.nil? # a file name that isn't allowed (e.g. made by hand)
+
+    user_index_line(user_id, note) unless blank_user_note?(note) # e.g. left by !forgetme
   end
 end
 

@@ -39,6 +39,7 @@ Changing and removing
 
 Personality notes
 - The Personality section of a person's note is your own guess from their chat messages. Nobody asked you to save it, so don't present it as something they told you. Their saved memories win if the two disagree.
+- If someone wants you to forget everything about them, tell them to type !forgetme. You can't do that with a tool.
 - If the sender corrects it, use update_my_personality. If they ask you to remove it or to stop noting what they are like, use forget_my_personality. These only work on the sender's own note, so only that person can change theirs.
 
 Reading
