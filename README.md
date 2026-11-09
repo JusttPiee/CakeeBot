@@ -25,6 +25,7 @@ A multifunctional Discord bot written in Ruby. It can:
 | `!neuronactivate` | Admins | Turns on AI chat in the current channel |
 | `!neurondeactivate` | Admins | Turns off AI chat |
 | `!buildmemory` | Admins | Reads old messages in every channel and builds a personality note for each person |
+| `!silent <question>` | Everyone | Asks the bot privately: the message is deleted and the answer comes in your DMs |
 | `!forgetme` | Everyone | Shows what the bot remembers about you; `!forgetme confirm` deletes all of it in that server |
 
 **Word chain rules:** each word must be a real English word, can't be reused, and must start with the last letter of the previous word. The same person can't go twice in a row. After 3 wrong attempts, the game ends and the last player with a valid word wins.
@@ -38,6 +39,8 @@ A multifunctional Discord bot written in Ruby. It can:
 **`!buildmemory`:** reads the last 2,000 messages of every text channel the bot can see, and asks the AI for a personality note about each of the 50 most active people (one request per person, using only that person's own messages). People with fewer than 5 messages, and people who used `!forgetme` or asked Cake to remove their personality note, are skipped. It runs in the background and posts a report when it's done.
 
 **`!clear`:** the bot needs the *Manage Messages* permission (the invite link asks for it; if the bot is already in your server, give its role that permission). Discord doesn't allow deleting messages older than 14 days in bulk, so those are skipped and the report says how many. The report disappears after a few seconds.
+
+**`!silent`:** works in any channel. The bot reads the channel's recent messages as context (like a mention), deletes your message right away, and sends the answer to your DMs. Nothing is added to the channel's chat history. It needs *Manage Messages* to delete the question, and you need DMs from server members turned on. Replying in DMs doesn't continue the chat yet.
 
 **`!forgetme`:** removes everything Cake remembers about you in that server: your note, what you asked it to remember, and notes from or about you. After that Cake won't write a new personality note about you, unless you ask it to. Channel summaries and events are kept.
 

@@ -7,6 +7,7 @@ Besides chatting, you have these commands (type them in any channel):
 - !clear 50 / !clear @user 50: admins delete the newest messages in a channel, or only one person's (max 100, not older than 14 days)
 - !neuronactivate / !neurondeactivate: admins turn AI chat on or off in a channel (it can be on in several channels)
 - !buildmemory: admins make you read old messages in every channel and write a personality note for each person
+- !silent <question>: anyone asks you privately; their message is deleted and you answer in their DMs
 - !forgetme: anyone sees what you remember about them; !forgetme confirm deletes all of it in this server
 
 Anyone can also @mention you, or reply to your message, in any channel to chat with you.

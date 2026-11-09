@@ -44,6 +44,7 @@ require_relative './terminal_commands' # Commands typed in the terminal, like /r
 require_relative './build_memory' # !buildmemory: personality notes from old messages
 require_relative './forget_me' # !forgetme: someone removes what Cake remembers about them
 require_relative './clear_messages' # !clear: admins delete recent messages
+require_relative './silent_chat' # !silent: ask Cake privately, the answer goes to DMs
 
 # Read a required secret. If it is missing, ask for it once in the terminal and save it to .env,
 # so first-time setup is just: run the bot and paste your keys.
@@ -159,6 +160,7 @@ bot.command(:help) do |event|
     embed.add_field(name: "🧠 `!neuronactivate`", value: "Activates AI mode in the current channel (Admin only). Can be on in several channels at once.")
     embed.add_field(name: "🧠 `!neurondeactivate`", value: "Deactivates AI mode in the current channel (Admin only).")
     embed.add_field(name: "📚 `!buildmemory`", value: "Reads old messages in every channel and builds a personality note for each person (Admin only).")
+    embed.add_field(name: "🤫 `!silent [question]`", value: "Ask Cake privately: your message is deleted and the answer comes in your DMs.")
     embed.add_field(name: "🧹 `!forgetme`", value: "Shows what Cake remembers about you; `!forgetme confirm` deletes it all.")
 
     embed.footer = Discordrb::Webhooks::EmbedFooter.new(text: "Made by Piee")
@@ -501,6 +503,11 @@ end
 
 bot.command(:forgetme) do |event, word| # !forgetme shows what would be deleted, !forgetme confirm deletes it
   forget_me_command(event, word)
+  nil
+end
+
+bot.command(:silent) do |event| # !silent <question>: the question is deleted, the answer goes to the asker's DMs
+  silent_command(event, client)
   nil
 end
 
