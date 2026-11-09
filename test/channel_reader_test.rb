@@ -29,6 +29,8 @@ class FakeChannel
     raise @error if @error
     @messages.last(amount).reverse
   end
+
+  def cached_nickname(_user_id) = nil # like ReadingChannel: no nickname known
 end
 
 # Pretend bot: knows some channels by ID, like bot.channel(id) in discordrb
@@ -44,6 +46,12 @@ class FakeBot
   end
 
   def profile = FakeAuthor.new(999, "Cake")
+end
+
+# Startup reads channels through a ReadingChannel (discord_history.rb), which calls Discord.
+# Tests read the fake channel as it is instead.
+module ReadAsIs
+  def self.new(channel, _bot) = channel
 end
 
 class ChannelReaderTest < Minitest::Test
@@ -145,12 +153,53 @@ class ChannelReaderTest < Minitest::Test
     assert_equal 11, history.first[:message_id]
   end
 
+  # --- Authors from Discord's JSON (people who left the server) ---
+
+  # discordrb would look this author up in the member list, which asks Discord when they left the server
+  class LookupAuthorMessage < FakeMessage
+    def author = raise("member lookup")
+  end
+
+  def raw_for(author_id, name, replied: nil)
+    raw = { "author" => { "id" => author_id.to_s, "username" => name.downcase, "global_name" => name } }
+    raw["referenced_message"] = replied if replied
+    raw
+  end
+
+  def test_authors_come_from_the_json_without_a_lookup
+    message = LookupAuthorMessage.new(nil, "hi", Time.now, 1)
+    wrapped = message_with_json_author(message, raw_for(456, "Pie"), FakeChannel.new([]))
+    history = build_history_from_messages([wrapped], BOT_ID)
+    assert_equal "Pie (456): hi", history.first[:content]
+  end
+
+  def test_the_replied_author_comes_from_the_json_too
+    replied = LookupAuthorMessage.new(nil, "gg ez", Time.now, 1)
+    reply = LookupAuthorMessage.new(nil, "no u", Time.now, 2, [], replied)
+    raw = raw_for(123, "Piee", replied: raw_for(456, "Pie"))
+    history = build_history_from_messages([message_with_json_author(reply, raw, FakeChannel.new([]))], BOT_ID)
+    assert_equal "Piee (123): no u (replying to Pie (456): gg ez)", history.first[:content]
+  end
+
+  def test_the_server_nickname_is_used_when_known
+    channel = FakeChannel.new([])
+    def channel.cached_nickname(_user_id) = "Boss"
+    wrapped = message_with_json_author(LookupAuthorMessage.new(nil, "hi", Time.now, 1), raw_for(123, "Bach"), channel)
+    assert_equal "Boss", wrapped.author.display_name
+  end
+
+  def test_a_message_that_is_not_a_reply
+    wrapped = message_with_json_author(LookupAuthorMessage.new(nil, "hi", Time.now, 1), raw_for(123, "Bach"), FakeChannel.new([]))
+    refute wrapped.reply?
+    assert_equal "hi", wrapped.content # everything else comes from the normal message
+  end
+
   # --- Remembering after a restart ---
 
   def test_startup_loads_the_saved_ai_channel
     channel = FakeChannel.new([say(PIEE, "hi"), say(BOT, "hello Piee")])
     histories = create_history_store
-    restore_ai_memory(FakeBot.new({ 555 => channel }), histories, ["555"]) # ai_config.txt stores IDs as text
+    restore_ai_memory(FakeBot.new({ 555 => channel }), histories, ["555"], ReadAsIs) # ai_config.txt stores IDs as text
     assert_equal 2, histories[555].length
     assert_includes LOGS.last, "Test Server #general: loaded 2 messages"
   end
@@ -159,27 +208,27 @@ class ChannelReaderTest < Minitest::Test
     general = FakeChannel.new([say(PIEE, "in general")], id: 555)
     gaming = FakeChannel.new([say(PIEE, "in gaming"), say(BOT, "gg")], id: 777)
     histories = create_history_store
-    restore_ai_memory(FakeBot.new({ 555 => general, 777 => gaming }), histories, %w[555 777])
+    restore_ai_memory(FakeBot.new({ 555 => general, 777 => gaming }), histories, %w[555 777], ReadAsIs)
     assert_equal ["Piee (123): in general"], histories[555].map { |m| m[:content] }
     assert_equal ["Piee (123): in gaming", "gg"], histories[777].map { |m| m[:content] }
   end
 
   def test_startup_with_ai_mode_off_loads_nothing
     histories = create_history_store
-    restore_ai_memory(FakeBot.new, histories, [])
+    restore_ai_memory(FakeBot.new, histories, [], ReadAsIs)
     assert_empty histories.keys
     assert_includes LOGS.last, "AI mode is off"
   end
 
   def test_startup_with_a_deleted_channel_does_not_crash
     histories = create_history_store
-    restore_ai_memory(FakeBot.new, histories, ["123"])
+    restore_ai_memory(FakeBot.new, histories, ["123"], ReadAsIs)
     assert_empty histories.keys
     assert_includes LOGS.last, "not found"
   end
 
   def test_startup_when_discord_refuses_does_not_crash
-    restore_ai_memory(FakeBot.new(error: RuntimeError.new("Missing Access")), create_history_store, ["555"])
+    restore_ai_memory(FakeBot.new(error: RuntimeError.new("Missing Access")), create_history_store, ["555"], ReadAsIs)
     assert_includes LOGS.last, "Could not open AI channel"
   end
 
@@ -189,7 +238,7 @@ class ChannelReaderTest < Minitest::Test
     write_channel_summary(1, 555, "earlier stuff", 10)
     channel = FakeChannel.new([FakeMessage.new(PIEE, "old", Time.now, 10), FakeMessage.new(PIEE, "new", Time.now, 11)])
     histories = create_history_store
-    restore_ai_memory(FakeBot.new({ 555 => channel }), histories, ["555"])
+    restore_ai_memory(FakeBot.new({ 555 => channel }), histories, ["555"], ReadAsIs)
     assert_equal ["Piee (123): new"], histories[555].map { |m| m[:content] }
   end
 

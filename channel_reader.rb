@@ -5,24 +5,27 @@ require_relative './chat_history'
 require_relative './channel_lock'
 require_relative './channel_summary'
 require_relative './image_attachments'
+require_relative './discord_history'
 
 # On startup: for every channel where AI mode was on (saved in ai_config.txt), load its
 # recent messages again, so the AI remembers the conversations from before the restart.
-def restore_ai_memory(bot, histories, channel_ids)
+# reader: how a channel is read. ReadingChannel takes authors from the JSON (see discord_history.rb);
+# tests pass a fake reader instead, so they never call Discord.
+def restore_ai_memory(bot, histories, channel_ids, reader = ReadingChannel)
   if channel_ids.empty?
     log "🧠 AI mode is off (no channel activated with !neuronactivate)"
     return
   end
 
-  channel_ids.each { |channel_id| restore_channel_memory(bot, histories, channel_id) }
+  channel_ids.each { |channel_id| restore_channel_memory(bot, histories, channel_id, reader) }
 end
 
-def restore_channel_memory(bot, histories, channel_id)
+def restore_channel_memory(bot, histories, channel_id, reader = ReadingChannel)
   channel = find_channel(bot, channel_id)
   return if channel.nil?
 
   with_channel_lock(channel.id) do
-    histories[channel.id] = load_ai_channel_history(channel, bot.profile.id)
+    histories[channel.id] = load_ai_channel_history(reader.new(channel, bot), bot.profile.id)
   end
   log "🧠 AI mode is on in #{channel.server&.name} ##{channel.name}: loaded #{histories[channel.id].length} messages into memory"
 end

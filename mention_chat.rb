@@ -30,7 +30,8 @@ def answer_mention(event, client)
   bot_name = event.server.bot.display_name # the name the server sees (nickname, or the bot's username)
 
   with_channel_lock(event.channel.id) do # two quick mentions are answered in order
-    history = load_channel_history(event.channel, bot_id) # already includes the message that mentioned us
+    reading_channel = ReadingChannel.new(event.channel, event.bot) # names from the JSON, see discord_history.rb
+    history = load_channel_history(reading_channel, bot_id) # already includes the message that mentioned us
     name_bot_mentions(history, bot_id, bot_name)
 
     event.channel.start_typing

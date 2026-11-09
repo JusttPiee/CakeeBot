@@ -13,13 +13,14 @@
 #   { id:, author_id:, author_name:, bot:, text:, time: }
 require 'json'
 require 'time'
+require 'delegate' # SimpleDelegator: a wrapper that passes every method on to the wrapped object
 require_relative './chat_history'
 require_relative './notes_file'
 
 DISCORD_PAGE_SIZE = 100
 
 # A channel to read from: the discordrb channel plus the bot (the raw API needs its token).
-# Tests use a fake with the same methods (test/fake_discord.rb).
+# Tests use fakes with the same methods (test/fake_discord.rb, test/channel_reader_test.rb).
 class ReadingChannel
   attr_reader :id, :name
 
@@ -37,6 +38,12 @@ class ReadingChannel
     JSON.parse(Discordrb::API::Channel.messages(@bot.token, @id, amount, before_id, after_id))
   end
 
+  # The newest messages as discordrb Messages, newest first, like channel.history.
+  # Used for the chat history (channel_reader.rb), which needs the Message objects for images,
+  # text files and replies. Only the author is taken from the JSON, so nobody is looked up.
+  def history(amount)
+    raw_history(amount).map { |raw| message_with_json_author(Discordrb::Message.new(raw, @bot), raw, self) }
+  end
 
   # The person's server nickname if discordrb already knows them, or nil. Never asks Discord.
   def cached_nickname(user_id)
@@ -44,6 +51,35 @@ class ReadingChannel
   rescue StandardError
     nil
   end
+end
+
+# The author of a message, made from the JSON: the id and name the chat history needs
+JsonAuthor = Struct.new(:id, :display_name)
+
+# A discordrb Message with its author (and the author of the message it replies to) taken from the JSON.
+# Everything else (content, attachments, time...) is the normal Message.
+class MessageWithJsonAuthor < SimpleDelegator
+  attr_reader :author, :referenced_message
+
+  def initialize(message, author, referenced_message)
+    super(message)
+    @author = author
+    @referenced_message = referenced_message
+  end
+
+  def reply? = !@referenced_message.nil?
+end
+
+# message: a discordrb Message made from `raw`. The replied message (if any) gets the same treatment.
+def message_with_json_author(message, raw, channel)
+  replied_raw = raw["referenced_message"]
+  replied = nil
+  replied = message_with_json_author(message.referenced_message, replied_raw, channel) if replied_raw && message.referenced_message
+  MessageWithJsonAuthor.new(message, json_author(raw["author"] || {}, channel), replied)
+end
+
+def json_author(author, channel)
+  JsonAuthor.new(author["id"].to_i, author_name(author, channel))
 end
 
 # Up to `max` raw messages, newest first (the order Discord returns them in).

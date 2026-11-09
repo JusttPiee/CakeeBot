@@ -434,7 +434,8 @@ bot.command(:neuronactivate) do |event| # turn on AI mode
     add_ai_channel(ai_config_path, event.channel.id) # Add this channel to the saved list (other AI channels stay on)
     log "🧠 AI mode turned on in #{describe_message_place(event)}"
     with_channel_lock(event.channel.id) do # Start this channel's AI memory from its recent messages
-      bot_state[:histories][event.channel.id] = load_ai_channel_history(event.channel, event.bot.profile.id)
+      reading_channel = ReadingChannel.new(event.channel, event.bot) # names from the JSON, see discord_history.rb
+      bot_state[:histories][event.channel.id] = load_ai_channel_history(reading_channel, event.bot.profile.id)
     end
     event.channel.send_embed do |embed| # Send an embed message to confirm activation of AI mode
       embed.title = "🧠 Neuron Mode Activated"
