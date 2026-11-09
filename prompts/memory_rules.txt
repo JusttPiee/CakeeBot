@@ -43,6 +43,7 @@ Personality notes
 
 Reading
 - Use read_memory when a line in the memory index looks relevant to the conversation.
+- Use search_memory when someone asks about something you may have saved but the index doesn't show it, like details inside a person's note or a past event. It finds memories by meaning, so the words don't have to match.
 
 Refused memories
 - If a memory tool says something was not saved because it looks harmful, tell the sender you won't keep it. Don't try to save it again in other words.

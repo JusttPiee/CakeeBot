@@ -75,5 +75,11 @@ TEXT_FILE_MAX_PER_REPLY = 2 # keeps the cost of one reply small
 # Moderation (moderation.rb): free OpenAI check, run on text before it is saved to memory
 MODERATION_MODEL = 'omni-moderation-latest'
 
+# search_memory (memory_search.rb): finds memories by meaning using embeddings
+EMBEDDING_MODEL = 'text-embedding-3-small' # cheapest embedding model; changing it re-embeds everything once
+EMBEDDING_MAX_CHARS = 8_000 # one note is cut here before embedding (about 2,000 tokens)
+MEMORY_SEARCH_RESULTS = 5 # how many matches the AI gets back
+MEMORY_SEARCH_PREVIEW_CHARS = 300 # how much of each match the AI sees (it can open the note with read_memory)
+
 # A reply shows who it answers and this much of that message's text
 REPLY_QUOTE_MAX_CHARS = 100
