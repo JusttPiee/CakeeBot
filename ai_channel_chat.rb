@@ -11,6 +11,7 @@ require_relative './compaction'
 require_relative './message_logger'
 require_relative './image_attachments'
 require_relative './memory_tidy'
+require_relative './discord_history'
 
 AI_UNAVAILABLE_MESSAGE = "⚠️ My AI brain is unavailable right now. Please try again later."
 
@@ -40,7 +41,8 @@ def answer_ai_channel_message(event, client, history)
 end
 
 # Facts from Discord for memory and tools. The AI never chooses these.
+# channel: this channel, so search_channel_history can read back through it (see discord_history.rb).
 def ai_channel_context(event)
-  { server_id: event.server.id, channel_id: event.channel.id,
+  { server_id: event.server.id, channel_id: event.channel.id, channel: ReadingChannel.new(event.channel, event.bot),
     requester_id: event.author.id, requester_name: event.author.display_name }
 end

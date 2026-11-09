@@ -7,6 +7,7 @@ require_relative './channel_lock'
 require_relative './ai_chat'
 require_relative './message_logger'
 require_relative './memory_tidy'
+require_relative './discord_history'
 
 # true if the message @mentions the bot, or is a reply to one of the bot's messages.
 # @everyone / @here are not counted: Discord does not put the bot in `mentions` for those.
@@ -46,7 +47,8 @@ end
 
 # Facts from Discord for memory and tools. No channel_id: mention channels have no summary,
 # but they still get the server's memory index and the memory tools.
+# channel: this channel, so search_channel_history can read back through it (see discord_history.rb).
 def mention_context(event)
-  { server_id: event.server.id, channel_id: nil,
+  { server_id: event.server.id, channel_id: nil, channel: ReadingChannel.new(event.channel, event.bot),
     requester_id: event.author.id, requester_name: event.author.display_name }
 end

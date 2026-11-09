@@ -29,6 +29,8 @@ A multifunctional Discord bot written in Ruby. It can:
 
 **Mentions:** in any channel, `@Cake` or a reply to one of Cake's messages gets an AI answer. Each time, Cake reads that channel's last 45 messages as context.
 
+**Checking old messages:** when someone says what another person said earlier, Cake can read back through the last 500 messages of the current channel (`search_channel_history`) and quote the real message with a link. For older things it jumps straight to a date, even years back ("what did Pie say in March 2022?"), or to the very first messages of the channel. It never reads other channels this way, and it saves nothing.
+
 ---
 
 ## Setup

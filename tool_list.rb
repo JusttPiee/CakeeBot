@@ -16,6 +16,7 @@ require_relative './tools/merge_memories'
 require_relative './tools/update_my_personality'
 require_relative './tools/forget_my_personality'
 require_relative './tools/search_memory'
+require_relative './tools/search_channel_history'
 
 # name => { definition: what the AI sees, run: the Ruby method that does the work }
 def available_tools
@@ -24,6 +25,7 @@ def available_tools
   tools["read_webpage"] = { definition: READ_WEBPAGE_DEFINITION, run: method(:run_read_webpage) }
   tools["read_memory"] = { definition: READ_MEMORY_DEFINITION, run: method(:run_read_memory) }
   tools["search_memory"] = { definition: SEARCH_MEMORY_DEFINITION, run: method(:run_search_memory) }
+  tools["search_channel_history"] = { definition: SEARCH_CHANNEL_HISTORY_DEFINITION, run: method(:run_search_channel_history) }
   tools["save_event"] = { definition: SAVE_EVENT_DEFINITION, run: method(:run_save_event) }
   tools["remember_about_me"] = { definition: REMEMBER_ABOUT_ME_DEFINITION, run: method(:run_remember_about_me) }
   tools["look_at_image"] = { definition: LOOK_AT_IMAGE_DEFINITION, run: method(:run_look_at_image) }
@@ -44,8 +46,8 @@ end
 
 # Runs one tool the AI asked for. Always returns text, even when something goes wrong,
 # so the AI can still answer and the bot never crashes because of a tool.
-# context = facts from Discord, never from the AI: { server_id:, channel_id:, requester_id:, requester_name: },
-# plus the OpenAI client (for moderation and search_memory)
+# context = facts from Discord, never from the AI: { server_id:, channel_id:, channel:, requester_id:, requester_name: },
+# plus the OpenAI client (for moderation, search_memory and search_channel_history)
 def run_tool(name, arguments_json, context = {})
   tool = available_tools[name]
   return "Error: there is no tool called #{name}." if tool.nil?

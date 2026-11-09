@@ -13,7 +13,7 @@ class FakeAiEvent
   FakeChannel = Struct.new(:id, :name) do
     def start_typing = nil
   end
-  FakeBot = Struct.new(:profile)
+  FakeBot = Struct.new(:profile, :token)
   FakeProfile = Struct.new(:id)
 
   attr_reader :sent, :author, :server, :channel, :id
@@ -30,7 +30,7 @@ class FakeAiEvent
 
   attr_accessor :attachments, :referenced_message
 
-  def bot = FakeBot.new(FakeProfile.new(999))
+  def bot = FakeBot.new(FakeProfile.new(999), "fake-token")
   def reply? = !referenced_message.nil?
   def message = self # event.message.id / .content / .reply! / .attachments land here
   def content = @text

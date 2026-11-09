@@ -81,5 +81,13 @@ EMBEDDING_MAX_CHARS = 8_000 # one note is cut here before embedding (about 2,000
 MEMORY_SEARCH_RESULTS = 5 # how many matches the AI gets back
 MEMORY_SEARCH_PREVIEW_CHARS = 300 # how much of each match the AI sees (it can open the note with read_memory)
 
+# search_channel_history (channel_search.rb): read older messages of the current channel as evidence
+CHANNEL_SEARCH_MAX_MESSAGES = 500 # how far back one search reads (Discord gives 100 per request, so 5 requests)
+CHANNEL_SEARCH_RESULTS = 10 # how many messages the AI gets back
+CHANNEL_SEARCH_MESSAGE_CHARS = 300 # each found message is cut here
+CHANNEL_SEARCH_EMBED_CHARS = 500 # each message is cut here before embedding (search by meaning)
+CHANNEL_SEARCHES_PER_REPLY = 3 # enough to try another date once or twice, but keeps one reply quick
+CHANNEL_EMBEDDING_CACHE_MAX = 20_000 # message vectors kept in RAM; cleared when it gets bigger
+
 # A reply shows who it answers and this much of that message's text
 REPLY_QUOTE_MAX_CHARS = 100

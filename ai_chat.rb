@@ -77,7 +77,7 @@ end
 # If the model used the whole budget on thinking and the answer is empty, try once more without thinking.
 def ask_ai(client, history, bot_name, context = {})
   context = context.merge(client: client, images: images_in_history(history), pending_images: [], image_looks: 0,
-                          text_files: text_files_in_history(history), text_file_reads: 0)
+                          text_files: text_files_in_history(history), text_file_reads: 0, channel_searches: 0)
   memory = load_prompt_memory(context)
   answer = request_answer(client, history, bot_name, OPENAI_REASONING_EFFORT, memory, context)
   return answer if answer.nil? || !answer.strip.empty? # an API error, or a real answer
