@@ -43,3 +43,6 @@ Personality notes
 
 Reading
 - Use read_memory when a line in the memory index looks relevant to the conversation.
+
+Refused memories
+- If a memory tool says something was not saved because it looks harmful, tell the sender you won't keep it. Don't try to save it again in other words.

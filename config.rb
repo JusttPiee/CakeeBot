@@ -72,5 +72,8 @@ TEXT_FILE_MAX_BYTES = 1_000_000 # bigger downloads are refused
 TEXT_FILE_MAX_CHARS = 30_000 # the AI reads at most this much of a file (about 10,000 tokens)
 TEXT_FILE_MAX_PER_REPLY = 2 # keeps the cost of one reply small
 
+# Moderation (moderation.rb): free OpenAI check, run on text before it is saved to memory
+MODERATION_MODEL = 'omni-moderation-latest'
+
 # A reply shows who it answers and this much of that message's text
 REPLY_QUOTE_MAX_CHARS = 100

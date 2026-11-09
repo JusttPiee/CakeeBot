@@ -2,6 +2,7 @@
 require_relative '../memory_store'
 require_relative '../event_notes'
 require_relative '../memory_index'
+require_relative '../moderation'
 
 SAVE_EVENT_DEFINITION = {
   type: "function",
@@ -24,6 +25,8 @@ def run_save_event(arguments, context)
 
   title = arguments["title"].to_s.strip
   return "Error: the event needs a title." if title.empty?
+  problem = check_moderation("#{title}: #{arguments['details']}", context)
+  return problem if problem
 
   path = with_server_memory_lock(context[:server_id]) do
     saved = save_event_note(context[:server_id], title, arguments["when"].to_s, arguments["details"].to_s)

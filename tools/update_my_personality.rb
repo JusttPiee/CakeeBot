@@ -24,7 +24,7 @@ def run_update_my_personality(arguments, context)
   return MEMORY_NOT_AVAILABLE if context[:server_id].nil?
 
   new_text = arguments["new_text"].to_s.strip
-  problem = check_fact(new_text)
+  problem = check_fact(new_text) || check_moderation(new_text, context)
   return problem if problem
 
   log "🧠 update_my_personality by #{context[:requester_name]} (#{context[:requester_id]}): #{new_text}"

@@ -4,6 +4,7 @@
 require_relative '../memory_store'
 require_relative '../user_notes'
 require_relative '../memory_index'
+require_relative '../moderation'
 
 # Optional context for a memory, shared by every tool that writes one
 MEMORY_WHY_AND_HOW_PARAMETERS = {
@@ -36,7 +37,7 @@ def run_remember_about_me(arguments, context)
   return MEMORY_NOT_AVAILABLE if context[:server_id].nil?
 
   fact = text_with_why_and_how(arguments["fact"], arguments)
-  problem = check_fact(fact)
+  problem = check_fact(fact) || check_moderation(fact, context)
   return problem if problem
 
   log "🧠 remember_about_me for #{context[:requester_name]} (#{context[:requester_id]}): #{fact}"

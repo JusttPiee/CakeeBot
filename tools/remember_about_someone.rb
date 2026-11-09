@@ -28,7 +28,7 @@ def run_remember_about_someone(arguments, context)
 
   subject_id = arguments["user_id"].to_s.strip
   note = text_with_why_and_how(arguments["note"], arguments)
-  problem = check_note_about_someone(subject_id, note, context)
+  problem = check_note_about_someone(subject_id, note, context) || check_moderation(note, context)
   return problem if problem
 
   log "🧠 remember_about_someone by #{context[:requester_name]} (#{context[:requester_id]}) about #{subject_id}: #{note}"

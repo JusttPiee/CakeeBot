@@ -42,7 +42,8 @@ end
 
 # Runs one tool the AI asked for. Always returns text, even when something goes wrong,
 # so the AI can still answer and the bot never crashes because of a tool.
-# context = facts from Discord, never from the AI: { server_id:, channel_id:, requester_id:, requester_name: }
+# context = facts from Discord, never from the AI: { server_id:, channel_id:, requester_id:, requester_name: },
+# plus the OpenAI client (for moderation)
 def run_tool(name, arguments_json, context = {})
   tool = available_tools[name]
   return "Error: there is no tool called #{name}." if tool.nil?

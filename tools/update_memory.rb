@@ -26,7 +26,7 @@ def run_update_memory(arguments, context)
   return MEMORY_NOT_AVAILABLE if context[:server_id].nil?
 
   new_text = text_with_why_and_how(arguments["new_text"], arguments)
-  problem = check_fact(new_text)
+  problem = check_fact(new_text) || check_moderation(new_text, context)
   return problem if problem
 
   with_server_memory_lock(context[:server_id]) do

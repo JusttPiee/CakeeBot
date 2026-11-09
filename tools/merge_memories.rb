@@ -32,7 +32,7 @@ def run_merge_memories(arguments, context)
   return "Error: merging needs at least two different memory ids." if ids.length < 2
 
   new_text = text_with_why_and_how(arguments["new_text"], arguments)
-  problem = check_fact(new_text)
+  problem = check_fact(new_text) || check_moderation(new_text, context)
   return problem if problem
 
   with_server_memory_lock(context[:server_id]) { merge_memories_locked(ids, new_text, context) }

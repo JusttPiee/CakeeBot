@@ -76,7 +76,7 @@ end
 # context: facts from Discord for memory and tools { server_id:, channel_id:, requester_id:, requester_name: }
 # If the model used the whole budget on thinking and the answer is empty, try once more without thinking.
 def ask_ai(client, history, bot_name, context = {})
-  context = context.merge(images: images_in_history(history), pending_images: [], image_looks: 0,
+  context = context.merge(client: client, images: images_in_history(history), pending_images: [], image_looks: 0,
                           text_files: text_files_in_history(history), text_file_reads: 0)
   memory = load_prompt_memory(context)
   answer = request_answer(client, history, bot_name, OPENAI_REASONING_EFFORT, memory, context)
