@@ -41,6 +41,7 @@ require_relative './channel_reader' # Load recent channel messages when AI mode 
 require_relative './mention_chat' # Answer when @mentioned in any channel
 require_relative './ai_channel_chat' # Answer in AI channels, with long-term memory and compaction
 require_relative './terminal_commands' # Commands typed in the terminal, like /restart
+require_relative './build_memory' # !buildmemory: personality notes from old messages
 require_relative './forget_me' # !forgetme: someone removes what Cake remembers about them
 
 # Read a required secret. If it is missing, ask for it once in the terminal and save it to .env,
@@ -155,6 +156,7 @@ bot.command(:help) do |event|
     embed.add_field(name: "🤝 `!invite`", value: "Get the bot invite link.")
     embed.add_field(name: "🧠 `!neuronactivate`", value: "Activates AI mode in the current channel (Admin only). Can be on in several channels at once.")
     embed.add_field(name: "🧠 `!neurondeactivate`", value: "Deactivates AI mode in the current channel (Admin only).")
+    embed.add_field(name: "📚 `!buildmemory`", value: "Reads old messages in every channel and builds a personality note for each person (Admin only).")
     embed.add_field(name: "🧹 `!forgetme`", value: "Shows what Cake remembers about you; `!forgetme confirm` deletes it all.")
 
     embed.footer = Discordrb::Webhooks::EmbedFooter.new(text: "Made by Piee")
@@ -489,6 +491,11 @@ end
 
 
 # Memory commands. They return nil, because discordrb would post any other return value in the chat.
+bot.command(:buildmemory) do |event| # admins only (checked in build_memory.rb), runs in the background
+  build_memory_command(event, client)
+  nil
+end
+
 bot.command(:forgetme) do |event, word| # !forgetme shows what would be deleted, !forgetme confirm deletes it
   forget_me_command(event, word)
   nil

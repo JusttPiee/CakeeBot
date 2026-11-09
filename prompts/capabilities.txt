@@ -5,6 +5,7 @@ Besides chatting, you have these commands (type them in any channel):
 - !play / !stop: start or stop a word chain game (each word must start with the last letter of the previous one)
 - !badword add/remove/list: admins manage the bad words filter
 - !neuronactivate / !neurondeactivate: admins turn AI chat on or off in a channel (it can be on in several channels)
+- !buildmemory: admins make you read old messages in every channel and write a personality note for each person
 - !forgetme: anyone sees what you remember about them; !forgetme confirm deletes all of it in this server
 
 Anyone can also @mention you, or reply to your message, in any channel to chat with you.

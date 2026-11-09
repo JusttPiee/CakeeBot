@@ -89,5 +89,12 @@ CHANNEL_SEARCH_EMBED_CHARS = 500 # each message is cut here before embedding (se
 CHANNEL_SEARCHES_PER_REPLY = 3 # enough to try another date once or twice, but keeps one reply quick
 CHANNEL_EMBEDDING_CACHE_MAX = 20_000 # message vectors kept in RAM; cleared when it gets bigger
 
+# !buildmemory (build_memory.rb): admins build personality notes from old messages in every channel
+BUILD_MEMORY_MESSAGES_PER_CHANNEL = 2000 # how far back it reads in each channel (20 Discord requests per channel)
+BUILD_MEMORY_MIN_MESSAGES = 5 # people with fewer messages than this are skipped (not enough to go on)
+BUILD_MEMORY_MAX_PEOPLE = 50 # the most active people first; one OpenAI request per person
+BUILD_MEMORY_MAX_CHARS_PER_PERSON = 12_000 # their newest messages, up to this much text (about 3,000 tokens)
+BUILD_MEMORY_REASONING_EFFORT = 'low'
+
 # A reply shows who it answers and this much of that message's text
 REPLY_QUOTE_MAX_CHARS = 100
