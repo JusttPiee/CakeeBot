@@ -20,6 +20,8 @@ A multifunctional Discord bot written in Ruby. It can:
 | `!badword add <word>` | Admins | Adds a word to the bad words list |
 | `!badword remove <word>` | Admins | Removes a word from the list |
 | `!badword list` | Admins | Shows the list |
+| `!clear <amount>` | Admins | Deletes the newest messages in the channel (max 100) |
+| `!clear @user <amount>` | Admins | Deletes that person's newest messages, looking back through the last 500 |
 | `!neuronactivate` | Admins | Turns on AI chat in the current channel |
 | `!neurondeactivate` | Admins | Turns off AI chat |
 | `!buildmemory` | Admins | Reads old messages in every channel and builds a personality note for each person |
@@ -34,6 +36,8 @@ A multifunctional Discord bot written in Ruby. It can:
 **Checking old messages:** when someone says what another person said earlier, Cake can read back through the last 500 messages of the current channel (`search_channel_history`) and quote the real message with a link. For older things it jumps straight to a date, even years back ("what did Pie say in March 2022?"), or to the very first messages of the channel. It never reads other channels this way, and it saves nothing.
 
 **`!buildmemory`:** reads the last 2,000 messages of every text channel the bot can see, and asks the AI for a personality note about each of the 50 most active people (one request per person, using only that person's own messages). People with fewer than 5 messages, and people who used `!forgetme` or asked Cake to remove their personality note, are skipped. It runs in the background and posts a report when it's done.
+
+**`!clear`:** the bot needs the *Manage Messages* permission (the invite link asks for it; if the bot is already in your server, give its role that permission). Discord doesn't allow deleting messages older than 14 days in bulk, so those are skipped and the report says how many. The report disappears after a few seconds.
 
 **`!forgetme`:** removes everything Cake remembers about you in that server: your note, what you asked it to remember, and notes from or about you. After that Cake won't write a new personality note about you, unless you ask it to. Channel summaries and events are kept.
 

@@ -43,6 +43,7 @@ require_relative './ai_channel_chat' # Answer in AI channels, with long-term mem
 require_relative './terminal_commands' # Commands typed in the terminal, like /restart
 require_relative './build_memory' # !buildmemory: personality notes from old messages
 require_relative './forget_me' # !forgetme: someone removes what Cake remembers about them
+require_relative './clear_messages' # !clear: admins delete recent messages
 
 # Read a required secret. If it is missing, ask for it once in the terminal and save it to .env,
 # so first-time setup is just: run the bot and paste your keys.
@@ -151,6 +152,7 @@ bot.command(:help) do |event|
     embed.add_field(name: "📝 `!badword add [word]`", value: "Adds a word to the bad words list.(Admin only)")
     embed.add_field(name: "🧹 `!badword remove [word]`", value: "Removes a word from the bad words list.(Admin only)")
     embed.add_field(name: "📃 `!badword list`", value: "Lists all bad words.(Admin only)")
+    embed.add_field(name: "🧹 `!clear [@user] [amount]`", value: "Deletes the newest messages here, or only that user's (max #{CLEAR_MAX_MESSAGES}, Admin only).")
     embed.add_field(name: "🎮 `!play`", value: "Starts the word chain game.")
     embed.add_field(name: "🛑 `!stop`", value: "Stops the word chain game.")
     embed.add_field(name: "🤝 `!invite`", value: "Get the bot invite link.")
@@ -168,6 +170,7 @@ end
 BOT_PERMISSIONS = 1024 +  # View Channels
                   2048 +  # Send Messages
                   16384 + # Embed Links (!help, !invite, neuron mode messages)
+                  8192 +  # Manage Messages (!clear)
                   65536   # Read Message History
 
 bot.command(:invite) do |event| # Command to get the bot invite link
@@ -498,6 +501,12 @@ end
 
 bot.command(:forgetme) do |event, word| # !forgetme shows what would be deleted, !forgetme confirm deletes it
   forget_me_command(event, word)
+  nil
+end
+
+# Moderation (no AI). Returns nil for the same reason as above.
+bot.command(:clear) do |event, *args| # !clear 50, or !clear @user 50 (admins only, checked in clear_messages.rb)
+  clear_command(event, args)
   nil
 end
 

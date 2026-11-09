@@ -96,5 +96,10 @@ BUILD_MEMORY_MAX_PEOPLE = 50 # the most active people first; one OpenAI request 
 BUILD_MEMORY_MAX_CHARS_PER_PERSON = 12_000 # their newest messages, up to this much text (about 3,000 tokens)
 BUILD_MEMORY_REASONING_EFFORT = 'low'
 
+# !clear (clear_messages.rb): admins delete recent messages, optionally only one person's
+CLEAR_MAX_MESSAGES = 100 # Discord deletes at most 100 messages in one go
+CLEAR_SCAN_MESSAGES = 500 # with a person: how far back to look for their messages
+CLEAR_REPORT_SECONDS = 5 # the "Deleted N messages" note disappears after this long
+
 # A reply shows who it answers and this much of that message's text
 REPLY_QUOTE_MAX_CHARS = 100
