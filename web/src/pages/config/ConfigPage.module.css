@@ -1,0 +1,94 @@
+.restartBanner {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--gap);
+  padding: 10px var(--gap);
+  border-radius: var(--radius);
+  background: var(--warn);
+  color: #1e1f22;
+  font-weight: 600;
+  animation: pop var(--time-lively) var(--ease-bounce);
+}
+
+.restartBanner button {
+  background: #1e1f22;
+  color: white;
+}
+
+@keyframes pop {
+  from {
+    transform: scale(0.96);
+    opacity: 0.4;
+  }
+}
+
+.group {
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-large);
+  padding: var(--gap-large);
+  background: var(--bg-side);
+  border-radius: var(--radius);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.labelLine {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-small);
+}
+
+.labelLine label {
+  margin-bottom: 0;
+}
+
+.inputLine {
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+}
+
+.inputLine input,
+.inputLine select {
+  width: 160px;
+}
+
+.default {
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+.constant {
+  color: var(--muted);
+  opacity: 0.7;
+}
+
+.saveBar {
+  position: sticky;
+  bottom: 0;
+  max-width: 720px;
+  padding: var(--gap) 0;
+  background: var(--bg);
+}
+
+.envList {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px var(--gap-large);
+  margin: 0;
+}
+
+.envList dd {
+  margin: 0;
+}

@@ -1,0 +1,48 @@
+/* Design tokens: every color, size and timing the app uses, named once here.
+   Components use var(--name) instead of raw values, so the whole look can change in this one file.
+   The palette is close to Discord's dark theme, because that is where Cake lives. */
+:root {
+  color-scheme: dark;
+
+  /* Surfaces, from the main area to the deepest */
+  --bg: #313338;
+  --bg-side: #2b2d31;
+  --bg-deep: #1e1f22;
+  --bg-hover: #3a3c43;
+  --bg-selected: #404249;
+  --border: #3f4147;
+
+  /* Text */
+  --text: #dbdee1;
+  --text-strong: #f2f3f5;
+  --muted: #949ba4;
+
+  /* Meaning */
+  --accent: #5865f2;
+  --accent-hover: #4752c4;
+  --ok: #23a55a;
+  --danger: #da373c;
+  --danger-hover: #a12d2f;
+  --warn: #f0b232;
+
+  /* Type */
+  --font: "gg sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: Consolas, "Cascadia Mono", monospace;
+  --text-small: 12px;
+  --text-normal: 14px;
+  --text-large: 16px;
+  --text-title: 20px;
+
+  /* Shape and space */
+  --radius: 8px;
+  --radius-small: 4px;
+  --gap-small: 6px;
+  --gap: 12px;
+  --gap-large: 20px;
+  --sidebar-width: 240px;
+
+  /* Motion: the "lively" style. The curve overshoots a little at the end, which reads as a bounce. */
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --time-quick: 0.15s;
+  --time-lively: 0.3s;
+}

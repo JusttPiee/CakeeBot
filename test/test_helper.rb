@@ -8,6 +8,10 @@ require "fileutils"
 ENV["CAKE_TEST_MEMORY_DIR"] ||= Dir.mktmpdir("cake-memory")
 # Log files too (message_logger.rb reads this into MESSAGE_LOG_DIR).
 ENV["CAKE_TEST_LOG_DIR"] ||= Dir.mktmpdir("cake-logs")
+# settings.json too (config.rb reads this into SETTINGS_FILE), so tests never see the user's real settings.
+ENV["CAKE_TEST_SETTINGS_FILE"] ||= File.join(Dir.mktmpdir("cake-settings"), "settings.json")
+# The built web UI too (web_api/routes/static_routes.rb reads this into WEB_DIST_DIR).
+ENV["CAKE_TEST_WEB_DIST"] ||= File.join(Dir.mktmpdir("cake-web"), "dist")
 
 # log and describe_openai_error normally come from cakee.rb.
 # In tests, log lines are collected in LOGS so tests can check them.

@@ -5,6 +5,7 @@
 
 # Runtime state written by the bot
 ai_config.txt
+settings.json
 memory/
 
 # Each bot's own personality (created from prompts/personality.default.txt if missing)
@@ -26,3 +27,10 @@ Thumbs.db
 
 # Design docs and plans (local only)
 docs/superpowers/
+
+# Web UI (React app in web/)
+web/node_modules/
+web/dist/
+
+# Brainstorm mockups
+.superpowers/

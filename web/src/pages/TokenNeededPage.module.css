@@ -1,0 +1,32 @@
+.page {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--gap-large);
+}
+
+.card {
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  padding: 28px;
+  background: var(--bg-side);
+  border-radius: var(--radius);
+}
+
+.example {
+  margin: 0;
+  padding: var(--gap);
+  background: var(--bg-deep);
+  border-radius: var(--radius-small);
+  font-family: var(--font-mono);
+  font-size: var(--text-small);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.language {
+  width: 110px;
+}

@@ -179,6 +179,38 @@ bundle exec ruby test/run_all.rb
 
 ---
 
+## Web UI
+
+Cake has a small admin page that runs on your own computer. It shows and edits what Cake remembers,
+switches AI channels on and off, changes settings, and shows the logs. Only this computer can open it.
+
+**First time (and after the web UI's code changes), build the page once:**
+
+```
+cd web
+npm install
+npm run build
+```
+
+This needs [Node.js](https://nodejs.org/). Then start the bot as usual. Once it is connected, the terminal prints:
+
+```
+🌐 Web UI: http://localhost:4567
+   First time in this browser? Open: http://localhost:4567/?token=...
+```
+
+Open the link with the token once. The browser remembers it, so afterwards `http://localhost:4567` is enough.
+
+- **Memory**: people's notes, general notes, events and channel summaries. Changes are saved to `memory/` right away.
+- **AI channels**: one switch per channel. It works at once and posts nothing in the channel.
+- **Config**: the limits from `config.rb`. Changes go to `settings.json` and take effect after a restart.
+- **Logs**: the live log, with filters, plus buttons for Restart and `!buildmemory`.
+
+Settings in `.env`: `WEB_UI=off` turns the web UI off, `WEB_UI_PORT` changes the port, and `WEB_UI_TOKEN`
+is the secret the bot creates by itself (delete its value to get a new one).
+
+The code is in `web_api/` (the API, Ruby) and `web/` (the page, React). See `web/README.md`.
+
 ## Troubleshooting
 
 | Problem | Fix |

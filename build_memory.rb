@@ -46,8 +46,8 @@ end
 # --- step 1: read ---
 
 # Every text channel of the server, ready to read as raw JSON (see discord_history.rb for why)
-def server_reading_channels(event)
-  event.server.text_channels.map { |channel| ReadingChannel.new(channel, event.bot) }
+def server_reading_channels(server, bot)
+  server.text_channels.map { |channel| ReadingChannel.new(channel, bot) }
 end
 
 # { messages: [...], channels_read:, channels_skipped: }. A channel the bot can't read is skipped.
@@ -197,6 +197,10 @@ def start_memory_build?(server_id)
   end
 end
 
+def memory_build_running?(server_id)
+  BUILD_MEMORY_RUNNING_LOCK.synchronize { BUILD_MEMORY_RUNNING.key?(server_id.to_s) }
+end
+
 def finish_memory_build(server_id)
   BUILD_MEMORY_RUNNING_LOCK.synchronize { BUILD_MEMORY_RUNNING.delete(server_id.to_s) }
 end
@@ -213,7 +217,7 @@ def build_memory_command(event, client, channels = nil)
   event.respond("🧠 Reading old messages in every channel I can see, this can take a few minutes...")
   log "🧠 !buildmemory started by #{event.author.display_name} (#{event.author.id}) in #{event.server.name}"
   bot_name = event.server.bot.display_name
-  channels ||= server_reading_channels(event)
+  channels ||= server_reading_channels(event.server, event.bot)
   Thread.new { run_memory_build(event, client, channels, bot_name) }
 end
 
@@ -228,14 +232,23 @@ def build_memory_problem(event)
 end
 
 def run_memory_build(event, client, channels, bot_name)
-  report = build_server_memory(client, event.server.id, channels, bot_name)
-  log "🧠 !buildmemory finished in #{event.server.name}: #{report[:results].to_h.inspect}"
-  event.respond(build_memory_report_text(report))
+  event.respond(memory_build_result_text(client, event.server.id, event.server.name, channels, bot_name))
 rescue StandardError => e
-  log "❗ !buildmemory failed in #{event.server.name} (#{e.class})"
-  event.respond("❗ Building memory failed, please try again later.")
+  log "❗ !buildmemory could not post its report in #{event.server.name} (#{e.class})"
 ensure
   finish_memory_build(event.server.id)
+end
+
+# Runs the whole build and returns what to tell whoever started it: the report, or one line if it failed.
+# It never raises, and it does not mark the build as finished: the caller does that (finish_memory_build).
+# Used by the Discord command above and by the web UI (web_api/routes/action_routes.rb).
+def memory_build_result_text(client, server_id, server_name, channels, bot_name)
+  report = build_server_memory(client, server_id, channels, bot_name)
+  log "🧠 !buildmemory finished in #{server_name}: #{report[:results].to_h.inspect}"
+  build_memory_report_text(report)
+rescue StandardError => e
+  log "❗ !buildmemory failed in #{server_name} (#{e.class})"
+  "❗ Building memory failed, please try again later."
 end
 
 def build_memory_report_text(report)

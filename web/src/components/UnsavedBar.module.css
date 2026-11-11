@@ -1,0 +1,19 @@
+.bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--gap);
+  margin-bottom: var(--gap);
+  padding: 10px var(--gap);
+  border-radius: var(--radius);
+  background: var(--bg-deep);
+  border-left: 4px solid var(--warn);
+  animation: pop var(--time-lively) var(--ease-bounce);
+}
+
+@keyframes pop {
+  from {
+    transform: scale(0.96);
+    opacity: 0.4;
+  }
+}

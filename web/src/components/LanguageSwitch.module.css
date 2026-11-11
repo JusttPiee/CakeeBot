@@ -1,0 +1,21 @@
+.switch {
+  display: flex;
+  gap: 2px;
+  background: var(--bg-deep);
+  border-radius: var(--radius-small);
+  padding: 2px;
+}
+
+.switch button {
+  flex: 1;
+  background: transparent;
+  padding: 4px 8px;
+  font-size: var(--text-small);
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.switch button.chosen {
+  background: var(--accent);
+  color: white;
+}

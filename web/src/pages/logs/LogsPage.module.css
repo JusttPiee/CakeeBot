@@ -1,0 +1,152 @@
+.commands {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: var(--gap);
+}
+
+.build {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-small);
+  min-width: 0;
+}
+
+.buildLine {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--gap);
+}
+
+.report {
+  margin: 0;
+  padding: var(--gap);
+  background: var(--bg-deep);
+  border-radius: var(--radius-small);
+  white-space: pre-wrap;
+  font-family: var(--font);
+}
+
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.filters {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: var(--gap);
+}
+
+.filters select {
+  min-width: 130px;
+}
+
+.search {
+  flex: 1;
+  min-width: 180px;
+}
+
+.statusLine {
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+.live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ok);
+  font-weight: 600;
+}
+
+.live::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ok);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.logWrap {
+  position: relative;
+  flex: 1;
+  min-height: 240px;
+  display: flex;
+}
+
+.log {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--gap);
+  background: var(--bg-deep);
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-size: var(--text-small);
+  line-height: 1.6;
+}
+
+.line {
+  display: flex;
+  gap: var(--gap);
+  padding: 0 4px;
+  border-radius: 2px;
+}
+
+.line.system {
+  background: rgb(255 255 255 / 4%);
+}
+
+.time {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+
+.place {
+  flex-shrink: 0;
+  color: var(--accent);
+  filter: brightness(1.35);
+}
+
+.text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.newLines {
+  position: absolute;
+  right: var(--gap-large);
+  bottom: var(--gap);
+  box-shadow: 0 4px 14px rgb(0 0 0 / 40%);
+  animation: rise var(--time-lively) var(--ease-bounce);
+}
+
+@keyframes rise {
+  from {
+    transform: translateY(12px);
+    opacity: 0;
+  }
+}

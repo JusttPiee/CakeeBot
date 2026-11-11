@@ -30,4 +30,26 @@ class ConfigTest < Minitest::Test
     assert_equal "none", OPENAI_FALLBACK_REASONING_EFFORT
     assert_equal 4000, OPENAI_MAX_OUTPUT_TOKENS
   end
+  def test_saved_setting_uses_the_saved_value
+    assert_equal 60, saved_setting("X_TEST", 45, { "X_TEST" => 60 })
+  end
+
+  def test_saved_setting_ignores_a_value_of_the_wrong_type
+    assert_equal 45, saved_setting("X_TEST", 45, { "X_TEST" => "abc" })
+    assert_equal "low", saved_setting("Y_TEST", "low", { "Y_TEST" => 3 })
+  end
+
+  def test_saved_setting_remembers_the_default
+    saved_setting("Z_TEST", 7, {})
+    assert_equal 7, CONFIG_DEFAULTS["Z_TEST"]
+  end
+
+  def test_broken_settings_file_gives_no_settings
+    path = File.join(Dir.mktmpdir, "settings.json")
+    assert_equal({}, read_saved_settings(path))            # missing
+    File.write(path, "{ not json")
+    assert_equal({}, read_saved_settings(path))            # broken
+    File.write(path, "[1, 2]")
+    assert_equal({}, read_saved_settings(path))            # not an object
+  end
 end

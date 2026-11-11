@@ -1,0 +1,17 @@
+.asking {
+  display: inline-flex;
+  gap: var(--gap-small);
+  animation: pop var(--time-lively) var(--ease-bounce);
+}
+
+@keyframes pop {
+  from {
+    transform: scale(0.9);
+    opacity: 0.4;
+  }
+}
+
+.quiet {
+  background: transparent;
+  padding: 4px 6px;
+}

@@ -34,6 +34,7 @@ Dotenv.load(ENV_FILE) # Does nothing if the file does not exist
 # Our own files come AFTER .env is loaded: they load config.rb, which reads the settings from ENV.
 # (Loading them earlier made config.rb see an empty .env, so settings like TAVILY_API_KEY were ignored.)
 require_relative './ai_config' # Load AI channel ID methods
+require_relative './ai_mode' # Turn AI mode on/off in a channel (shared with the web UI)
 require_relative './chat_history' # Per-channel AI memory (add, trim)
 require_relative './ai_chat' # Ask OpenAI and send (split) replies
 require_relative './channel_lock' # One lock per channel so messages are handled in order
@@ -45,6 +46,7 @@ require_relative './build_memory' # !buildmemory: personality notes from old mes
 require_relative './forget_me' # !forgetme: someone removes what Cake remembers about them
 require_relative './clear_messages' # !clear: admins delete recent messages
 require_relative './silent_chat' # !silent: ask Cake privately, the answer goes to DMs
+require_relative './web_api/web_server' # The web UI at http://localhost:4567 (see web_api/)
 
 # Read a required secret. If it is missing, ask for it once in the terminal and save it to .env,
 # so first-time setup is just: run the bot and paste your keys.
@@ -440,12 +442,9 @@ ai_config_path = 'ai_config.txt' # AI channel IDs, one per line (AI mode can be 
 
 bot.command(:neuronactivate) do |event| # turn on AI mode
   if event.user.permission?(:administrator)
-    add_ai_channel(ai_config_path, event.channel.id) # Add this channel to the saved list (other AI channels stay on)
     log "🧠 AI mode turned on in #{describe_message_place(event)}"
-    with_channel_lock(event.channel.id) do # Start this channel's AI memory from its recent messages
-      reading_channel = ReadingChannel.new(event.channel, event.bot) # names from the JSON, see discord_history.rb
-      bot_state[:histories][event.channel.id] = load_ai_channel_history(reading_channel, event.bot.profile.id)
-    end
+    # Saves the channel (other AI channels stay on) and starts its AI memory from its recent messages, see ai_mode.rb
+    turn_ai_mode_on(event.bot, bot_state[:histories], ai_config_path, event.channel)
     event.channel.send_embed do |embed| # Send an embed message to confirm activation of AI mode
       embed.title = "🧠 Neuron Mode Activated"
       embed.description = "Neuron Mode has been **activated** for this channel!"
@@ -465,8 +464,7 @@ end
 
 bot.command(:neurondeactivate) do |event| # turn off AI mode
   if event.user.permission?(:administrator)
-    if remove_ai_channel(ai_config_path, event.channel.id) # Only this channel; other AI channels stay on
-      bot_state[:histories].delete(event.channel.id) # Free this channel's memory
+    if turn_ai_mode_off(bot_state[:histories], ai_config_path, event.channel.id) # Only this channel; other AI channels stay on (ai_mode.rb)
       log "🧠 AI mode turned off in #{describe_message_place(event)}"
       event.channel.send_embed do |embed|
         embed.title = "🧠 Neuron Mode Deactivated"
@@ -545,6 +543,7 @@ bot.ready do |event|
   log "🤖 Cake is alive! Logged in as #{event.bot.profile.distinct} in #{event.bot.servers.size} server(s)"
   restore_ai_memory(event.bot, bot_state[:histories], load_ai_channels(ai_config_path)) # remember the AI chats after a restart
   start_memory_tidy_once(client, event.bot, bot_state[:histories]) # here, because sending memory questions needs the connection
+  start_web_ui(event.bot, client, bot_state[:histories], ai_config_path, ENV_FILE) # here, because it lists the bot's servers
 end
 
 bot.disconnected do

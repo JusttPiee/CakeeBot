@@ -1,0 +1,223 @@
+/* Styles for plain HTML elements, shared by every page. Component styles live next to each component. */
+@import "./tokens.css";
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: var(--text-normal);
+  line-height: 1.45;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: var(--text-title);
+  color: var(--text-strong);
+}
+
+h2 {
+  font-size: var(--text-large);
+  color: var(--text-strong);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* --- Form controls --- */
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+input,
+textarea,
+select {
+  width: 100%;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+  padding: 8px 10px;
+  transition: border-color var(--time-quick);
+}
+
+textarea {
+  resize: vertical;
+  min-height: 90px;
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+input:disabled,
+textarea:disabled,
+select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
+/* The default button. Variants: .primary (the main action) and .danger (deletes something). */
+button {
+  background: var(--bg-selected);
+  border: none;
+  border-radius: var(--radius-small);
+  padding: 7px 14px;
+  cursor: pointer;
+  transition:
+    background var(--time-quick),
+    transform var(--time-lively) var(--ease-bounce);
+}
+
+button:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+button.primary {
+  background: var(--accent);
+  color: white;
+}
+
+button.primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+button.danger {
+  background: var(--danger);
+  color: white;
+}
+
+button.danger:hover:not(:disabled) {
+  background: var(--danger-hover);
+}
+
+button.link {
+  background: none;
+  padding: 0;
+  color: var(--muted);
+  text-decoration: underline;
+}
+
+label {
+  display: block;
+  font-size: var(--text-small);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+code {
+  font-family: var(--font-mono);
+  font-size: var(--text-small);
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.error-text {
+  color: var(--danger);
+  font-size: var(--text-small);
+}
+
+/* Scrollbars that match the dark theme */
+* {
+  scrollbar-color: var(--bg-deep) transparent;
+  scrollbar-width: thin;
+}
+
+/* People who turned on "reduce motion" in their system get no animation at all.
+   (Animations made with the Motion library are switched off separately, in App.tsx.) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* --- Small layout helpers used by the forms on every page --- */
+
+.field {
+  display: flex;
+  flex-direction: column;
+}
+
+.help {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--gap);
+}
+
+.switch-row {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: var(--gap);
+}
+
+.warning-text {
+  color: var(--warn);
+  font-size: var(--text-small);
+}
+
+.badge {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 10px;
+  background: var(--bg-deep);
+  color: var(--muted);
+  font-size: var(--text-small);
+  white-space: nowrap;
+}

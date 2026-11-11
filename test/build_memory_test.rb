@@ -150,6 +150,30 @@ class BuildMemoryTest < Minitest::Test
     assert_equal 1, report[:results][:built]
   end
 
+  # --- the build as one text, for whoever started it (the Discord command or the web UI) ---
+
+  def test_result_text_is_the_report
+    broken = HistoryChannel.new([], name: "secret", error: RuntimeError.new("Missing Access"))
+    text = memory_build_result_text(BuildMemoryClient.new(answers: []), 1, "Test Server", [broken], "Cake")
+    assert_includes text, "Read 0 messages in 0 channels"
+    assert_includes text, "couldn't read 1 channels"
+    assert(LOGS.any? { |line| line.include?("!buildmemory finished in Test Server") })
+  end
+
+  def test_result_text_reports_a_failure_instead_of_raising
+    text = memory_build_result_text(BuildMemoryClient.new(answers: []), 1, "Test Server", nil, "Cake") # no channel list: the build crashes
+    assert_equal "❗ Building memory failed, please try again later.", text
+    assert(LOGS.any? { |line| line.include?("!buildmemory failed in Test Server (NoMethodError)") })
+  end
+
+  def test_knows_when_a_build_is_running
+    refute memory_build_running?(1)
+    start_memory_build?(1)
+    assert memory_build_running?("1")
+    finish_memory_build(1)
+    refute memory_build_running?(1)
+  end
+
   def test_the_request_asks_for_json_without_storing
     client = BuildMemoryClient.new(answers: [note_json("x")])
     build_server_memory(client, 1, [HistoryChannel.new(history_messages(6, BACH))], "Cake")

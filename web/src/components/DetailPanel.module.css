@@ -1,0 +1,12 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-large);
+  padding-bottom: var(--gap-large);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}

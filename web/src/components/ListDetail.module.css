@@ -1,0 +1,77 @@
+.layout {
+  display: flex;
+  gap: var(--gap-large);
+  min-height: 0;
+  flex: 1;
+}
+
+.listColumn {
+  width: 290px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  min-height: 0;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.row {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  padding: 8px 10px;
+  border-radius: var(--radius-small);
+  transition:
+    background var(--time-quick),
+    transform var(--time-lively) var(--ease-bounce);
+}
+
+.row:hover:not(:disabled) {
+  background: var(--bg-hover);
+  transform: translateX(4px);
+}
+
+.row:active:not(:disabled) {
+  transform: translateX(4px) scale(0.98);
+}
+
+.row.selected,
+.row.selected:hover:not(:disabled) {
+  background: var(--bg-selected);
+}
+
+.detailColumn {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  border-left: 1px solid var(--border);
+  padding-left: var(--gap-large);
+}
+
+/* Narrow windows: the list goes on top, the detail below it */
+@media (max-width: 700px) {
+  .layout {
+    flex-direction: column;
+  }
+
+  .listColumn {
+    width: auto;
+    max-height: 40vh;
+  }
+
+  .detailColumn {
+    border-left: none;
+    border-top: 1px solid var(--border);
+    padding-left: 0;
+    padding-top: var(--gap-large);
+  }
+}
