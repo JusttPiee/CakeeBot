@@ -68,7 +68,7 @@ end
 
 # "(replying to b (777): gg ez [image 42: cat.png])"
 def reply_note(replied)
-  parts = [short_quote(replied.content), image_markers(replied), text_file_markers(replied)].reject(&:empty?)
+  parts = [short_quote(name_mentions(replied.content, mentioned_names(replied))), image_markers(replied), text_file_markers(replied)].reject(&:empty?)
   "(replying to #{replied.author.display_name} (#{replied.author.id}): #{parts.join(' ')})"
 end
 

@@ -2,11 +2,12 @@
 # Like images, the text is NOT sent to the AI right away, because it can be very long.
 # The AI only sees a small marker, like "[text file 42: message.txt]", and reads the file
 # with the read_text_file tool when it needs to (tools/read_text_file.rb).
+require_relative './mention_names' # mentions are shown as @Name
 require_relative './config'
 
 # The message's text plus a marker for each image and text file. "" if it has none of these.
 def text_with_attachment_markers(message)
-  [message.content.to_s.strip, image_markers(message), text_file_markers(message)].reject(&:empty?).join(" ")
+  [name_mentions(message.content.to_s.strip, mentioned_names(message)), image_markers(message), text_file_markers(message)].reject(&:empty?).join(" ")
 end
 
 def text_file_markers(message)

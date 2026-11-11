@@ -16,6 +16,7 @@ require 'time'
 require 'delegate' # SimpleDelegator: a wrapper that passes every method on to the wrapped object
 require_relative './chat_history'
 require_relative './notes_file'
+require_relative './mention_names'
 
 DISCORD_PAGE_SIZE = 100
 
@@ -59,12 +60,14 @@ JsonAuthor = Struct.new(:id, :display_name)
 # A discordrb Message with its author (and the author of the message it replies to) taken from the JSON.
 # Everything else (content, attachments, time...) is the normal Message.
 class MessageWithJsonAuthor < SimpleDelegator
-  attr_reader :author, :referenced_message
+  attr_reader :author, :referenced_message, :mention_names
 
-  def initialize(message, author, referenced_message)
+  # mention_names: { "user id" => "name" } for everyone the message mentions (see mention_names.rb)
+  def initialize(message, author, referenced_message, mention_names = {})
     super(message)
     @author = author
     @referenced_message = referenced_message
+    @mention_names = mention_names
   end
 
   def reply? = !@referenced_message.nil?
@@ -75,11 +78,18 @@ def message_with_json_author(message, raw, channel)
   replied_raw = raw["referenced_message"]
   replied = nil
   replied = message_with_json_author(message.referenced_message, replied_raw, channel) if replied_raw && message.referenced_message
-  MessageWithJsonAuthor.new(message, json_author(raw["author"] || {}, channel), replied)
+  MessageWithJsonAuthor.new(message, json_author(raw["author"] || {}, channel), replied, json_mention_names(raw, channel))
 end
 
+# Another bot gets "[bot]" after its name (see mention_names.rb). Cake's own messages are recognised by id instead.
 def json_author(author, channel)
-  JsonAuthor.new(author["id"].to_i, author_name(author, channel))
+  name = author_name(author, channel)
+  JsonAuthor.new(author["id"].to_i, author["bot"] == true ? "#{name}#{BOT_MARK}" : name)
+end
+
+# { "user id" => "name" } for everyone the message mentions, from the JSON (no lookup)
+def json_mention_names(raw, channel)
+  (raw["mentions"] || []).to_h { |user| [user["id"].to_s, author_name(user, channel)] }
 end
 
 # Up to `max` raw messages, newest first (the order Discord returns them in).

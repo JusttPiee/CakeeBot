@@ -181,6 +181,29 @@ class ChannelReaderTest < Minitest::Test
     assert_equal "Piee (123): no u (replying to Pie (456): gg ez)", history.first[:content]
   end
 
+  # The mistake from 2026-11-11: Piee asked Citlali (another bot) to explain Natlan, then asked Cake
+  # "do you know what I asked you to do", and Cake thought the question and Citlali's answer were its own.
+  def test_mentions_are_named_and_other_bots_are_marked
+    citlali = { "id" => "1333", "username" => "citlali", "global_name" => "Citlali", "bot" => true }
+    asked = raw_for(123, "Piee").merge("mentions" => [citlali])
+    answered = { "author" => citlali }
+    messages = [message_with_json_author(LookupAuthorMessage.new(nil, "Natlan is a land of fire", Time.now, 2), answered, FakeChannel.new([])),
+                message_with_json_author(LookupAuthorMessage.new(nil, "<@1333> explain Natlan", Time.now, 1), asked, FakeChannel.new([]))]
+    history = build_history_from_messages(messages, BOT_ID)
+    assert_equal "Piee (123): @Citlali explain Natlan", history[0][:content]
+    assert_equal "Citlali [bot] (1333): Natlan is a land of fire", history[1][:content]
+    assert_equal "user", history[1][:role] # another bot's answer is never Cake's own
+  end
+
+  def test_mentions_in_the_replied_message_are_named_too
+    replied = LookupAuthorMessage.new(nil, "hey <@123>", Time.now, 1)
+    reply = LookupAuthorMessage.new(nil, "who me?", Time.now, 2, [], replied)
+    replied_raw = raw_for(456, "Pie").merge("mentions" => [{ "id" => "123", "username" => "piee", "global_name" => "Piee" }])
+    raw = raw_for(123, "Piee", replied: replied_raw)
+    history = build_history_from_messages([message_with_json_author(reply, raw, FakeChannel.new([]))], BOT_ID)
+    assert_equal "Piee (123): who me? (replying to Pie (456): hey @Piee)", history.first[:content]
+  end
+
   def test_the_server_nickname_is_used_when_known
     channel = FakeChannel.new([])
     def channel.cached_nickname(_user_id) = "Boss"
