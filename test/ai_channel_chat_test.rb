@@ -176,4 +176,17 @@ class AiChannelChatTest < Minitest::Test
     answer_ai_channel_message(FakeAiEvent.new("remember I hate anime"), client, [])
     assert_equal 1, read_user_note(1, 123)[:remembered].length
   end
+
+  # --- the shared recent memory (recent_activity.rb) ---
+
+  def test_an_answer_in_an_ai_channel_is_recorded
+    RECENT_ACTIVITY.clear
+    answer_ai_channel_message(FakeAiEvent.new("explain Natlan"), FakeClient.new(answers: ["Natlan is fire"]), [])
+    entry = all_recent_entries(1).first
+    assert_equal [:exchange, "555", "general", "Bach", "explain Natlan", "Natlan is fire"],
+                 entry.values_at(:kind, :channel_id, :channel_name, :speaker_name, :text, :answer)
+    assert_equal false, entry[:public] # the pretend channel has no permission data: not shared
+  ensure
+    RECENT_ACTIVITY.clear
+  end
 end

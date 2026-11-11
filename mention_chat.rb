@@ -8,6 +8,7 @@ require_relative './ai_chat'
 require_relative './message_logger'
 require_relative './memory_tidy'
 require_relative './discord_history'
+require_relative './recent_activity_events' # write each answer into the shared recent memory
 
 # true if the message @mentions the bot, or is a reply to one of the bot's messages.
 # @everyone / @here are not counted: Discord does not put the bot in `mentions` for those.
@@ -41,6 +42,7 @@ def answer_mention(event, client)
     else
       send_reply(event, answer)
       log_bot_reply(event, answer)
+      record_recent_answer(event, answer)
       tidy_and_ask(event, client)
     end
   end
@@ -53,3 +55,4 @@ def mention_context(event)
   { server_id: event.server.id, channel_id: nil, channel: ReadingChannel.new(event.channel, event.bot),
     requester_id: event.author.id, requester_name: event.author.display_name }
 end
+

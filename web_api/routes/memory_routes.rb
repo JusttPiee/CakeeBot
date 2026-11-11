@@ -6,6 +6,7 @@
 #   DELETE /api/servers/:sid/events/:slug
 #   GET    /api/servers/:sid/summaries         the rolling summary of each AI channel
 #   DELETE /api/servers/:sid/summaries/:cid
+#   GET    /api/servers/:sid/recent            the shared recent memory (in RAM), newest first, read-only
 #
 # General notes are changed and removed through /items/:item_id (user_note_routes.rb).
 # Summaries can't be edited: compaction rewrites them all the time.
@@ -13,6 +14,7 @@ require_relative '../../memory_store'
 require_relative '../../memory_index'
 require_relative '../../event_notes'
 require_relative '../../channel_summary'
+require_relative '../../recent_activity'
 require_relative '../memory_views'
 
 EVENT_WHEN_HELP = "The time must look like YYYY-MM-DD or YYYY-MM-DD HH:MM, and be a real date."
@@ -47,6 +49,10 @@ module MemoryRoutes
 
     app.delete '/api/servers/:sid/summaries/:cid' do
       web_delete_summary(server_id!, discord_id!(:cid)) ? json({ ok: true }) : not_found!
+    end
+
+    app.get '/api/servers/:sid/recent' do
+      json(all_recent_entries(server_id!).reverse.map { |entry| recent_entry_view(entry) })
     end
 
     app.helpers MemoryRouteHelpers

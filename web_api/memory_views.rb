@@ -37,3 +37,10 @@ def summary_view(channel_id, channel_name, note)
   { channel_id: channel_id.to_s, channel_name: channel_name.to_s,
     updated: note[:headers]["updated"].to_s, text: note[:body] }
 end
+
+# One line of the shared recent memory (recent_activity.rb). kind is "exchange" or "tagged" (then answer is nil).
+def recent_entry_view(entry)
+  { kind: entry[:kind].to_s, time: entry[:time].iso8601, channel_id: entry[:channel_id], channel_name: entry[:channel_name],
+    public: entry[:public], speaker_id: entry[:speaker_id], speaker_name: entry[:speaker_name],
+    text: entry[:text], answer: entry[:answer] }
+end

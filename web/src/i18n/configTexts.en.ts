@@ -20,6 +20,7 @@ export const configEn = {
   "config.group.search": "Searching memory and old messages",
   "config.group.buildmemory": "!buildmemory",
   "config.group.clear": "!clear",
+  "config.group.recent": "Recent activity in other channels",
 
   // --- AI replies ---
   "config.OPENAI_REASONING_EFFORT.label": "Thinking effort",
@@ -90,4 +91,14 @@ export const configEn = {
   "config.CLEAR_SCAN_MESSAGES.help": "With !clear @user: how far back to look for that person's messages.",
   "config.CLEAR_REPORT_SECONDS.label": "Seconds the report stays",
   "config.CLEAR_REPORT_SECONDS.help": "The \"Deleted N messages\" note disappears after this long.",
+
+  // --- Recent activity in other channels ---
+  "config.RECENT_ACTIVITY_HOURS.label": "Hours to remember",
+  "config.RECENT_ACTIVITY_HOURS.help": "Lines older than this drop out of the shared recent memory.",
+  "config.RECENT_ACTIVITY_MAX_LINES.label": "Lines in total",
+  "config.RECENT_ACTIVITY_MAX_LINES.help": "The most lines kept for the whole server. They go into every reply, so more lines cost more tokens.",
+  "config.RECENT_ACTIVITY_MAX_PER_CHANNEL.label": "Lines per channel",
+  "config.RECENT_ACTIVITY_MAX_PER_CHANNEL.help": "So one busy channel can't push the other channels out.",
+  "config.RECENT_ACTIVITY_ANSWER_CHARS.label": "Characters of Cake's answer",
+  "config.RECENT_ACTIVITY_ANSWER_CHARS.help": "Cake's answer is cut here in each line.",
 } as const;

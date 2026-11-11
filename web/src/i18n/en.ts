@@ -54,6 +54,7 @@ export const en = {
   "memory.tab.general": "General notes",
   "memory.tab.events": "Events",
   "memory.tab.summaries": "Channels",
+  "memory.tab.recent": "Recent",
 
   "memory.people.count": "{count} people",
   "memory.people.search": "Search by name or ID",
@@ -106,6 +107,12 @@ export const en = {
   "memory.summaries.readOnly": "Cake rewrites this summary by itself, so it can't be edited here.",
   "memory.summaries.delete": "Delete summary",
   "memory.summaries.deleteConfirm": "Yes, delete",
+
+  "memory.recent.intro": "What happened around Cake lately, in every channel. Cake keeps this in memory only, so it is empty after a restart. Lines from private channels are only used in that same channel.",
+  "memory.recent.reload": "Reload",
+  "memory.recent.empty": "Nothing yet. Lines appear when someone talks with Cake.",
+  "memory.recent.private": "private",
+  "memory.recent.notAnswered": "Cake did not answer",
 
   // --- AI channels page ---
   "channels.title": "AI channels",

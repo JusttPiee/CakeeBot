@@ -20,6 +20,7 @@ export const configVi: Record<keyof typeof configEn, string> = {
   "config.group.search": "Tìm trong bộ nhớ và tin nhắn cũ",
   "config.group.buildmemory": "!buildmemory",
   "config.group.clear": "!clear",
+  "config.group.recent": "Gần đây ở kênh khác",
 
   // --- Câu trả lời của AI ---
   "config.OPENAI_REASONING_EFFORT.label": "Mức suy nghĩ",
@@ -89,4 +90,14 @@ export const configVi: Record<keyof typeof configEn, string> = {
   "config.CLEAR_SCAN_MESSAGES.help": "Với !clear @user: tìm tin của người đó ngược về bao xa.",
   "config.CLEAR_REPORT_SECONDS.label": "Số giây hiện báo cáo",
   "config.CLEAR_REPORT_SECONDS.help": "Dòng \"Deleted N messages\" tự biến mất sau chừng này giây.",
+
+  // --- Gần đây ở kênh khác ---
+  "config.RECENT_ACTIVITY_HOURS.label": "Số giờ ghi nhớ",
+  "config.RECENT_ACTIVITY_HOURS.help": "Dòng cũ hơn chừng này giờ sẽ bị bỏ khỏi sổ ngắn hạn chung.",
+  "config.RECENT_ACTIVITY_MAX_LINES.label": "Tổng số dòng",
+  "config.RECENT_ACTIVITY_MAX_LINES.help": "Số dòng tối đa cho cả server. Mọi câu trả lời đều kèm các dòng này, nên càng nhiều càng tốn token.",
+  "config.RECENT_ACTIVITY_MAX_PER_CHANNEL.label": "Số dòng mỗi kênh",
+  "config.RECENT_ACTIVITY_MAX_PER_CHANNEL.help": "Để một kênh đông đúc không đẩy hết dòng của các kênh khác.",
+  "config.RECENT_ACTIVITY_ANSWER_CHARS.label": "Số ký tự câu trả lời của Cake",
+  "config.RECENT_ACTIVITY_ANSWER_CHARS.help": "Câu trả lời của Cake trong mỗi dòng bị cắt ở đây.",
 };

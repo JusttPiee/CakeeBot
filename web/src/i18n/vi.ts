@@ -53,6 +53,7 @@ export const vi: Record<TextKey, string> = {
   "memory.tab.general": "Ghi chú chung",
   "memory.tab.events": "Sự kiện",
   "memory.tab.summaries": "Kênh",
+  "memory.tab.recent": "Gần đây",
 
   "memory.people.count": "{count} người",
   "memory.people.search": "Tìm theo tên hoặc ID",
@@ -105,6 +106,12 @@ export const vi: Record<TextKey, string> = {
   "memory.summaries.readOnly": "Cake tự viết lại bản tóm tắt này, nên không sửa được ở đây.",
   "memory.summaries.delete": "Xoá tóm tắt",
   "memory.summaries.deleteConfirm": "Ừ, xoá",
+
+  "memory.recent.intro": "Những gì vừa xảy ra quanh Cake ở mọi kênh. Cake chỉ giữ trong RAM nên restart là trống. Dòng từ kênh riêng tư chỉ được dùng trong chính kênh đó.",
+  "memory.recent.reload": "Tải lại",
+  "memory.recent.empty": "Chưa có gì. Các dòng sẽ hiện khi có người nói chuyện với Cake.",
+  "memory.recent.private": "riêng tư",
+  "memory.recent.notAnswered": "Cake không trả lời",
 
   // --- trang Kênh AI ---
   "channels.title": "Kênh AI",

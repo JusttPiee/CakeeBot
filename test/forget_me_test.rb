@@ -27,6 +27,16 @@ class ForgetMeTest < Minitest::Test
     with_server_memory_lock(1) { rebuild_memory_index(1) }
   end
 
+  def test_forgetme_clears_recent_activity
+    RECENT_ACTIVITY.clear
+    record_recent_exchange(1, { id: "555", name: "general", public: true }, 123, "Bach", "hi", "hello")
+    record_recent_exchange(1, { id: "555", name: "general", public: true }, 456, "Pie", "yo", "hey")
+    forget_user(1, 123)
+    assert_equal ["Pie"], all_recent_entries(1).map { |entry| entry[:speaker_name] }
+  ensure
+    RECENT_ACTIVITY.clear
+  end
+
   def test_preview_counts_what_would_be_removed
     save_bach_memories
     assert_equal({ facts: 2, personality: true, shared: 3 }, forget_me_preview(1, 123))

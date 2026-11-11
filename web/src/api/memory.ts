@@ -1,7 +1,16 @@
 // The calls behind the Memory page. One function per API route of the bot
 // (see web_api/routes/user_note_routes.rb and memory_routes.rb).
 import { apiRequest } from "./client";
-import type { ChannelSummary, EventForm, EventNote, GeneralNote, UserNote, UserNoteForm, UserSummary } from "./types";
+import type {
+  ChannelSummary,
+  EventForm,
+  EventNote,
+  GeneralNote,
+  RecentEntry,
+  UserNote,
+  UserNoteForm,
+  UserSummary,
+} from "./types";
 
 const serverPath = (serverId: string) => `/api/servers/${serverId}`;
 
@@ -66,4 +75,11 @@ export function listSummaries(serverId: string): Promise<ChannelSummary[]> {
 
 export async function deleteSummary(serverId: string, channelId: string): Promise<void> {
   await apiRequest("DELETE", `${serverPath(serverId)}/summaries/${channelId}`);
+}
+
+// --- Shared recent memory (in the bot's RAM) ---
+
+/** What happened around Cake lately in every channel, newest first. Read-only. */
+export function listRecent(serverId: string): Promise<RecentEntry[]> {
+  return apiRequest<RecentEntry[]>("GET", `${serverPath(serverId)}/recent`);
 }

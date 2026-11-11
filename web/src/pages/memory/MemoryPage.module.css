@@ -1,0 +1,80 @@
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap-small);
+  border-bottom: 1px solid var(--border);
+}
+
+.tab {
+  padding: 8px 14px;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  font-weight: 600;
+  transition: color var(--time-quick);
+}
+
+.tab:hover {
+  color: var(--text);
+}
+
+.tab.active {
+  color: var(--text-strong);
+  border-bottom-color: var(--accent);
+}
+
+/* --- rows of the lists in the tabs --- */
+
+.rowTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-small);
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.rowText {
+  color: var(--muted);
+  font-size: var(--text-small);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.faded {
+  opacity: 0.55;
+}
+
+.count {
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+/* --- the top of a detail panel --- */
+
+.idLine {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-small);
+  color: var(--muted);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px var(--gap);
+}
+
+.facts dt {
+  color: var(--muted);
+}
+
+.facts dd {
+  margin: 0;
+}
+
+.readOnlyText {
+  white-space: pre-wrap;
+  padding: var(--gap);
+  background: var(--bg-deep);
+  border-radius: var(--radius-small);
+}

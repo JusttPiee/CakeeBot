@@ -92,6 +92,21 @@ export interface ChannelSummary {
   text: string;
 }
 
+/** One line of the shared recent memory: a question to Cake with its answer, or another bot tagging Cake. */
+export interface RecentEntry {
+  kind: "exchange" | "tagged";
+  time: string;
+  channel_id: string;
+  channel_name: string;
+  /** False for a channel not everyone can read: Cake only uses the line in that same channel. */
+  public: boolean;
+  speaker_id: string;
+  speaker_name: string;
+  text: string;
+  /** Cake's answer, or null when Cake did not answer (kind "tagged"). */
+  answer: string | null;
+}
+
 // --- AI channels ---
 
 export interface ChannelInfo {

@@ -75,4 +75,17 @@ class WebMemoryTest < WebApiTest
     api :delete, "/api/servers/111/summaries/900"
     assert_equal 404, last_response.status
   end
+
+  def test_lists_the_recent_activity_newest_first
+    RECENT_ACTIVITY.clear
+    record_recent_exchange(111, { id: "900", name: "general", public: true }, "5", "Piee", "explain Natlan", "Natlan is fire", Time.now - 60)
+    record_recent_tag(111, { id: "901", name: "secret", public: false }, "1333", "Citlali [bot]", "hey Cake")
+    api :get, "/api/servers/111/recent"
+    assert_equal [["tagged", "secret", false, "Citlali [bot]", "hey Cake", nil],
+                  ["exchange", "general", true, "Piee", "explain Natlan", "Natlan is fire"]],
+                 json.map { |entry| entry.values_at("kind", "channel_name", "public", "speaker_name", "text", "answer") }
+    assert_match(/\A\d{4}-\d{2}-\d{2}T/, json[0]["time"])
+  ensure
+    RECENT_ACTIVITY.clear
+  end
 end

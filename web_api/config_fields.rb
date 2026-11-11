@@ -54,6 +54,12 @@ CONFIG_GROUPS = [
     integer_field("CLEAR_MAX_MESSAGES", 1, 100), # Discord deletes at most 100 messages in one go
     integer_field("CLEAR_SCAN_MESSAGES", 100, 2000),
     integer_field("CLEAR_REPORT_SECONDS", 1, 60)
+  ] },
+  { id: "recent", fields: [ # the shared recent memory (recent_activity.rb)
+    integer_field("RECENT_ACTIVITY_HOURS", 1, 24),
+    integer_field("RECENT_ACTIVITY_MAX_LINES", 5, 50),
+    integer_field("RECENT_ACTIVITY_MAX_PER_CHANNEL", 1, 20),
+    integer_field("RECENT_ACTIVITY_ANSWER_CHARS", 50, 500)
   ] }
 ].freeze
 

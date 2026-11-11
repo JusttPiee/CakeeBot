@@ -314,4 +314,31 @@ class AiChatTest < Minitest::Test
     ask_ai(client, history, "Mochi", CONTEXT)
     assert_includes client.requests.last[:instructions], "We talked about pho."
   end
+  # --- Recently, in other channels (recent_activity.rb) ---
+
+  def test_recent_activity_goes_after_the_fixed_part_of_the_prompt
+    prompt = build_system_prompt("Mochi", memory_index: "- users/5.md: Piee", recent_activity: "[12:20 #test] Citlali [bot] (1333) tagged you")
+    fixed_end = prompt.index("Today's date is")
+    recent_at = prompt.index("## Recently, in other channels")
+    assert recent_at > fixed_end # the fixed part stays first, so OpenAI can cache it
+    assert recent_at > prompt.index("Long-term memory")
+    assert_includes prompt, "Citlali [bot] (1333) tagged you"
+  end
+
+  def test_no_recent_section_when_there_is_nothing
+    refute_includes build_system_prompt("Mochi"), "## Recently, in other channels" # the rules mention it, the section is absent
+  end
+
+  def test_prompt_memory_reads_recent_activity_for_other_channels
+    RECENT_ACTIVITY.clear
+    clear_test_memory
+    record_recent_exchange("1", { id: "100", name: "test", public: true }, "5", "Piee", "explain Natlan", "Natlan is fire")
+    record_recent_exchange("1", { id: "200", name: "test-2", public: true }, "5", "Piee", "here", "same channel")
+    mention_context = { server_id: "1", channel_id: nil, channel: Struct.new(:id).new(200) }
+    memory = load_prompt_memory(mention_context)
+    assert_includes memory[:recent_activity], "explain Natlan"
+    refute_includes memory[:recent_activity], "same channel" # already in this channel's own history
+  ensure
+    RECENT_ACTIVITY.clear
+  end
 end

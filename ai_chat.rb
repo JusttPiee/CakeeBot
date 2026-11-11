@@ -1,6 +1,7 @@
 # Talking to OpenAI and sending the reply back to Discord.
 # Settings come from config.rb; log and describe_openai_error come from cakee.rb.
 require 'date'
+require_relative './recent_activity' # "Recently, in other channels" in the prompt
 require_relative './prompts'
 require_relative './chat_history'
 require_relative './message_splitter'
@@ -38,11 +39,12 @@ end
 # Final system prompt = personality (with the bot's name filled in) + capabilities + technical rules + memory rules + today's date,
 # then the server's memory index, this channel's summary and any open memory question (when there are any).
 # The parts that change least come first, so OpenAI can cache the start of the prompt.
-def build_system_prompt(bot_name, memory_index: "", channel_summary: "", open_question: "")
+def build_system_prompt(bot_name, memory_index: "", channel_summary: "", recent_activity: "", open_question: "")
   personality = load_personality.gsub("{bot_name}", bot_name)
   prompt = "#{personality}\n\n#{CAPABILITIES}\n\n#{CHAT_RULES}\n\n#{MEMORY_RULES}\n\nToday's date is #{Date.today.strftime('%A, %d %B %Y')}."
   prompt += "\n\n## Long-term memory (index of saved notes)\n#{memory_index}" unless memory_index.empty?
   prompt += "\n\n## Summary of earlier conversation in this channel\n#{channel_summary}" unless channel_summary.empty?
+  prompt += "\n\n## Recently, in other channels (background only)\n#{recent_activity}" unless recent_activity.empty?
   prompt += "\n\n#{open_question}" unless open_question.empty?
   prompt
 end
@@ -60,8 +62,19 @@ def load_prompt_memory(context)
     summary = read_channel_summary(server_id, context[:channel_id])[:text]
     memory[:channel_summary] = cap_for_prompt(summary, "Channel summary")
   end
+  memory[:recent_activity] = recent_activity_for_prompt(server_id, context)
   memory[:open_question] = open_question_prompt(server_id, context[:requester_id])
   memory
+end
+
+# What happened around Cake lately in OTHER channels (recent_activity.rb). A mention has no channel_id,
+# so the channel the reply is for comes from the channel object. A failure only costs this part of the prompt.
+def recent_activity_for_prompt(server_id, context)
+  channel_id = context[:channel_id] || context[:channel]&.id
+  recent_activity_text(recent_entries_for(server_id, channel_id))
+rescue StandardError => e
+  log "⚠️ Could not read the recent activity (#{e.class})"
+  ""
 end
 
 # Temporary guard until size limits are designed: never put more than MEMORY_PROMPT_MAX_CHARS into the prompt

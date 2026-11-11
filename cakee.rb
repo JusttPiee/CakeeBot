@@ -524,6 +524,10 @@ bot.message do |event| # Message event to handle AI interactions
   end
 end
 
+bot.message do |event| # Another bot tagged Cake: Cake doesn't answer, but remembers it for a while (recent_activity_events.rb)
+  note_unanswered_tag(event, ai_config_path)
+end
+
 bot.message do |event| # Answer when @mentioned (or replied to) in any other channel
   next if event.server.nil? # DMs: not handled yet
   next if event.message.content.start_with?('!') # commands are handled by bot.command

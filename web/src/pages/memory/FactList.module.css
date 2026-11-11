@@ -1,0 +1,43 @@
+.facts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fact {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-small);
+  padding: 4px 8px;
+  border-radius: var(--radius-small);
+}
+
+.fact:hover {
+  background: var(--bg-hover);
+}
+
+.date {
+  flex-shrink: 0;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-small);
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.icon {
+  background: transparent;
+  padding: 4px 6px;
+}
+
+.add {
+  display: flex;
+  gap: var(--gap-small);
+}

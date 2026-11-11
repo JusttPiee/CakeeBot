@@ -130,5 +130,13 @@ CLEAR_MAX_MESSAGES = saved_setting('CLEAR_MAX_MESSAGES', 100) # Discord deletes 
 CLEAR_SCAN_MESSAGES = saved_setting('CLEAR_SCAN_MESSAGES', 500) # with a person: how far back to look for their messages
 CLEAR_REPORT_SECONDS = saved_setting('CLEAR_REPORT_SECONDS', 5) # the "Deleted N messages" note disappears after this long
 
+# Shared recent memory (recent_activity.rb): what happened around Cake lately in every channel, in RAM only.
+# It goes into every reply's prompt as "Recently, in other channels", so keep it short.
+RECENT_ACTIVITY_HOURS = saved_setting('RECENT_ACTIVITY_HOURS', 2) # older lines are dropped
+RECENT_ACTIVITY_MAX_LINES = saved_setting('RECENT_ACTIVITY_MAX_LINES', 20) # in the whole server
+RECENT_ACTIVITY_MAX_PER_CHANNEL = saved_setting('RECENT_ACTIVITY_MAX_PER_CHANNEL', 8) # one busy channel can't push the others out
+RECENT_ACTIVITY_ANSWER_CHARS = saved_setting('RECENT_ACTIVITY_ANSWER_CHARS', 200) # Cake's answer is cut here in a line
+RECENT_ACTIVITY_QUESTION_CHARS = 200 # the question is cut here
+
 # A reply shows who it answers and this much of that message's text
 REPLY_QUOTE_MAX_CHARS = 100

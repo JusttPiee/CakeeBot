@@ -16,6 +16,7 @@ require_relative './memory_items'
 require_relative './memory_index'
 require_relative './user_notes'
 require_relative './tidy_state'
+require_relative './recent_activity'
 
 FORGET_ME_CONFIRM_WORD = "confirm"
 
@@ -39,6 +40,7 @@ def forget_user(server_id, user_id)
     rebuild_memory_index(server_id)
   end
   forget_tidy_state(server_id, user_id)
+  forget_recent_activity_of(server_id, user_id) # the shared recent memory, in RAM
   removed
 end
 
