@@ -1,6 +1,7 @@
 # Talking to OpenAI and sending the reply back to Discord.
 # Settings come from config.rb; log and describe_openai_error come from cakee.rb.
 require 'date'
+require_relative './token_usage' # one 🪙 line per OpenAI request
 require_relative './recent_activity' # "Recently, in other channels" in the prompt
 require_relative './prompts'
 require_relative './chat_history'
@@ -142,7 +143,9 @@ def send_ai_request(client, instructions, input, reasoning_effort, tools_allowed
   }
   parameters[:temperature] = OPENAI_TEMPERATURE if OPENAI_TEMPERATURE # some models only accept the default
   add_tools(parameters, tools_allowed)
-  client.responses.create(parameters: parameters)
+  response = client.responses.create(parameters: parameters)
+  log_token_usage("chat", response)
+  response
 end
 
 # The response is a list of items: "reasoning" (thinking), "function_call" (tool request), "message" (reply)

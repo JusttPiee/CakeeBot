@@ -2,6 +2,7 @@
 # Texts with a similar MEANING get vectors that point in a similar direction, even if they share no words:
 # "what's my cat called?" is close to "has a cat named Mochi".
 # Used by search_memory (memory_search.rb). Kept separate so search_channel_history can use it later.
+require_relative './token_usage' # one 🪙 line per OpenAI request
 require_relative './config'
 
 # One vector per text, in the same order. One request for the whole list.
@@ -10,6 +11,7 @@ def embed_texts(client, texts)
   return [] if texts.empty?
 
   response = client.embeddings(parameters: { model: EMBEDDING_MODEL, input: texts })
+  log_token_usage("embeddings", response)
   response["data"].to_a.sort_by { |item| item["index"] }.map { |item| item["embedding"] }
 end
 

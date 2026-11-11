@@ -12,6 +12,7 @@
 # Other people's memories are sent without ids, as read-only background for spotting conflicts.
 require 'json'
 require 'digest'
+require_relative './token_usage' # one 🪙 line per OpenAI request
 require_relative './config'
 require_relative './prompts'
 require_relative './memory_store'
@@ -282,6 +283,7 @@ end
 # What the AI suggests: { "merges" => [{ "memory_ids" => [...], "new_texts" => [...] }], "question" => "..." }
 def request_tidy(client, memories, extras)
   response = client.responses.create(parameters: tidy_parameters(tidy_input(memories, extras)))
+  log_token_usage("memory tidy", response)
   JSON.parse(answer_text(response))
 end
 

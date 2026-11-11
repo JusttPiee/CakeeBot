@@ -11,6 +11,7 @@
 # If anything fails, the history is left as it is and the next reply tries again.
 # (If it keeps failing, the hard ceiling in ai_channel_chat.rb cuts the history the old way.)
 require 'json'
+require_relative './token_usage' # one 🪙 line per OpenAI request
 require_relative './chat_history'
 require_relative './memory_store'
 require_relative './memory_index'
@@ -134,6 +135,7 @@ end
 # Ask OpenAI for the new memory. Returns the parsed result, or nil (with a log line) if anything went wrong.
 def request_compaction(client, input_text, channel_id, bot_name)
   response = client.responses.create(parameters: compaction_parameters(input_text, bot_name))
+  log_token_usage("compaction", response)
   result = JSON.parse(answer_text(response))
   raise JSON::ParserError, "no summary in the answer" unless result.is_a?(Hash) && result["summary"].is_a?(String)
 

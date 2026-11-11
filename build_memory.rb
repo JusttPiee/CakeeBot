@@ -11,6 +11,7 @@
 # It runs in the background, so the bot keeps answering while it works. One build per server at a time.
 # Saved facts ("Asked to remember") are never touched.
 require 'json'
+require_relative './token_usage' # one 🪙 line per OpenAI request
 require_relative './config'
 require_relative './prompts'
 require_relative './discord_history'
@@ -165,6 +166,7 @@ end
 # The parsed JSON answer. Raises on API errors or a broken answer.
 def request_person_note(client, input_text, bot_name)
   response = client.responses.create(parameters: build_memory_parameters(input_text, bot_name))
+  log_token_usage("buildmemory", response)
   result = JSON.parse(answer_text(response))
   raise JSON::ParserError, "no personality in the answer" unless result.is_a?(Hash) && result.key?("personality")
 

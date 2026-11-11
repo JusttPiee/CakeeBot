@@ -162,8 +162,9 @@ class AiChatTest < Minitest::Test
 
   def test_empty_answer_is_logged_with_the_reason
     ask_ai(FakeClient.new(answers: ["", "ok"]), history, "Mochi")
-    assert_includes LOGS.first, "reason: max_output_tokens"
-    assert_includes LOGS.first, "reasoning: 4000"
+    line = LOGS.find { |entry| entry.include?("reason: max_output_tokens") } # the token lines (🪙) come first now
+    assert line
+    assert_includes line, "reasoning: 4000"
   end
 
   def test_answer_text_joins_every_text_part
