@@ -13,7 +13,7 @@ A multifunctional Discord bot written in Ruby. It can:
 
 | Command | Who | What it does |
 |---|---|---|
-| `!help` | Everyone | Shows the command list |
+| `!help` | Everyone | Shows the command list, one category per page (pick one in the menu, or type e.g. `!help music`) |
 | `!ping` | Everyone | Checks that the bot is online |
 | `!invite` | Everyone | Sends a link to add the bot to another server |
 | `!wordchain` | Everyone | Starts a word chain game |

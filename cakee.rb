@@ -48,6 +48,7 @@ require_relative './build_memory' # !buildmemory: personality notes from old mes
 require_relative './forget_me' # !forgetme: someone removes what Cake remembers about them
 require_relative './clear_messages' # !clear: admins delete recent messages
 require_relative './silent_chat' # !silent: ask Cake privately, the answer goes to DMs
+require_relative './help_command' # !help: the command list, one category per page
 require_relative './web_api/web_server' # The web UI at http://localhost:4567 (see web_api/)
 
 # Read a required secret. If it is missing, ask for it once in the terminal and save it to .env,
@@ -145,38 +146,15 @@ bot_state = {histories: create_history_store} # AI chat memory: one history per 
 
 
 # General Commands
-bot.command(:help) do |event|
-  event.channel.send_embed do |embed|
-    embed.title = "📘 Manual for Cake"
-    embed.thumbnail = Discordrb::Webhooks::EmbedThumbnail.new(url: event.bot.profile.avatar_url)
-    embed.color = 0x5DADE2 # Light blue color
-    embed.description = "**Commands:**"
+# !help [category]: one page per category, switched with a dropdown menu (help_command.rb, texts in help_pages.rb)
+bot.command(:help) do |event, *args|
+  help_command(event, args)
+  nil
+end
 
-    embed.add_field(name: "🆘 `!help`", value: "Show this help message.")
-    embed.add_field(name: "🏓 `!ping`", value: "Responds with Pong!")
-    embed.add_field(name: "📝 `!badword add [word]`", value: "Adds a word to the bad words list.(Admin only)")
-    embed.add_field(name: "🧹 `!badword remove [word]`", value: "Removes a word from the bad words list.(Admin only)")
-    embed.add_field(name: "📃 `!badword list`", value: "Lists all bad words.(Admin only)")
-    embed.add_field(name: "🧹 `!clear [@user] [amount]`", value: "Deletes the newest messages here, or only that user's (max #{CLEAR_MAX_MESSAGES}, Admin only).")
-    embed.add_field(name: "🎮 `!wordchain`", value: "Starts the word chain game.")
-    embed.add_field(name: "🛑 `!wordstop`", value: "Stops the word chain game.")
-    embed.add_field(name: "🎵 `!play <link or name>`", value: "Plays music from YouTube, SoundCloud or Spotify in your voice channel (or adds it to the queue).")
-    embed.add_field(name: "⏯ `!pause` / `!resume`", value: "Pauses or resumes the music.")
-    embed.add_field(name: "⏭ `!skip`", value: "Skips the current song.")
-    embed.add_field(name: "⏩ `!skipplaylist`", value: "Skips the rest of the current playlist.")
-    embed.add_field(name: "📜 `!queue`", value: "Shows the songs waiting.")
-    embed.add_field(name: "🗑 `!clearqueue`", value: "Removes the waiting songs; the current song keeps playing.")
-    embed.add_field(name: "⏹ `!stop`", value: "Stops the music and leaves the voice channel (admins can use it from anywhere).")
-    embed.add_field(name: "🤝 `!invite`", value: "Get the bot invite link.")
-    embed.add_field(name: "🧠 `!neuronactivate`", value: "Activates AI mode in the current channel (Admin only). Can be on in several channels at once.")
-    embed.add_field(name: "🧠 `!neurondeactivate`", value: "Deactivates AI mode in the current channel (Admin only).")
-    embed.add_field(name: "📚 `!buildmemory`", value: "Reads old messages in every channel and builds a personality note for each person (Admin only).")
-    embed.add_field(name: "🤫 `!silent [question]`", value: "Ask Cake privately: your message is deleted and the answer comes in your DMs.")
-    embed.add_field(name: "🧹 `!forgetme`", value: "Shows what Cake remembers about you; `!forgetme confirm` deletes it all.")
-
-    embed.footer = Discordrb::Webhooks::EmbedFooter.new(text: "Made by Piee")
-    embed.timestamp = Time.now
-  end
+bot.string_select(custom_id: /\Ahelp:/) do |event| # someone picked a page in a help menu
+  help_menu_selected(event)
+  nil
 end
 
 # Permissions requested by the auto-generated invite link (only what the bot actually uses)
