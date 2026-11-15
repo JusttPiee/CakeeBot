@@ -35,3 +35,6 @@ web/dist/
 
 # Brainstorm mockups
 .superpowers/
+
+# Node speaker (music/)
+music/node_modules/

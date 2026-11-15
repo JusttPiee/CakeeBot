@@ -12,9 +12,15 @@ class WebConfigTest < WebApiTest
 
   def test_every_field_has_a_default_from_config_rb
     names = CONFIG_GROUPS.flat_map { |group| group[:fields].map { |field| field[:name] } }
-    assert_equal 31, names.length
+    assert_equal 35, names.length
     assert_empty names - CONFIG_DEFAULTS.keys
     assert_equal names.uniq, names
+  end
+
+  def test_music_group_is_listed
+    group = CONFIG_GROUPS.find { |g| g[:id] == "music" }
+    assert_equal %w[MUSIC_ENABLED MUSIC_IDLE_LEAVE_SECONDS MUSIC_PLAYLIST_LIMIT MUSIC_QUEUE_SHOW], group[:fields].map { |f| f[:name] }
+    assert_equal %w[on off], group[:fields].first[:options]
   end
 
   def test_every_default_is_a_valid_value
@@ -26,7 +32,7 @@ class WebConfigTest < WebApiTest
     field = json["groups"].flat_map { |group| group["fields"] }.find { |f| f["name"] == "MAX_HISTORY_MESSAGES" }
     assert_equal({ "name" => "MAX_HISTORY_MESSAGES", "type" => "integer", "min" => 10, "max" => 200, "options" => nil,
                    "default" => 45, "saved" => nil, "running" => 45 }, field)
-    assert_equal %w[chat history tools search buildmemory clear recent], json["groups"].map { |group| group["id"] }
+    assert_equal %w[chat history tools search buildmemory clear recent music], json["groups"].map { |group| group["id"] }
     assert_equal ["OPENAI_MODEL", "OPENAI_TEMPERATURE"], json["read_only"].map { |f| f["name"] }
     assert_equal false, json["restart_needed"]
   end

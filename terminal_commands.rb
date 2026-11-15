@@ -6,9 +6,10 @@ RESTART_EXIT_CODE = 42
 BOT_STOP_TIMEOUT_SECONDS = 10
 
 # name => { description: shown in the list of commands, run: what it does }
-def terminal_commands(bot)
+# bridge: the music process, stopped on restart so Node does not outlive the bot (nil = no music)
+def terminal_commands(bot, bridge = nil)
   {
-    "/restart" => { description: "restart the bot (reloads the code and prompts)", run: -> { restart_bot(bot) } }
+    "/restart" => { description: "restart the bot (reloads the code and prompts)", run: -> { restart_bot(bot, Process.method(:exit!), bridge) } }
   }
 end
 
@@ -41,8 +42,9 @@ end
 
 # Disconnect from Discord, then exit with the code start.bat is waiting for.
 # exit! because a normal exit only ends this thread, not the bot. Replies still being written are lost.
-def restart_bot(bot, exiter = Process.method(:exit!))
+def restart_bot(bot, exiter = Process.method(:exit!), bridge = nil)
   log "🔄 Restarting... (only start.bat starts the bot again; if you ran it another way, start it again yourself)"
+  stop_music_for_restart(bridge)
   stop_bot_for_restart(bot)
   $stdout.flush # exit! skips this, and the last lines printed would be lost
   exiter.call(RESTART_EXIT_CODE)
@@ -52,4 +54,11 @@ def stop_bot_for_restart(bot)
   Timeout.timeout(BOT_STOP_TIMEOUT_SECONDS) { bot.stop }
 rescue StandardError => e
   log "⚠️ Could not disconnect cleanly (#{e.class}). Restarting anyway."
+end
+
+# Closes the music process (Node exits when it is closed). A failure must not stop the restart.
+def stop_music_for_restart(bridge)
+  bridge&.stop
+rescue StandardError => e
+  log "⚠️ Could not stop the music process cleanly (#{e.class}). Restarting anyway."
 end

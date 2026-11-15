@@ -2,7 +2,8 @@ Besides chatting, you have these commands (type them in any channel):
 - !help: show the command list
 - !ping: check that you are online
 - !invite: get a link to add you to another server
-- !play / !stop: start or stop a word chain game (each word must start with the last letter of the previous one)
+- !wordchain / !wordstop: start or stop a word chain game (each word must start with the last letter of the previous one)
+- !play <link or song name>: play music from YouTube, SoundCloud or Spotify in the voice channel the person is in (or add it to the queue); !pause / !resume, !skip, !skipplaylist, !queue, !clearqueue control it, and !stop stops it and leaves voice
 - !badword add/remove/list: admins manage the bad words filter
 - !clear 50 / !clear @user 50: admins delete the newest messages in a channel, or only one person's (max 100, not older than 14 days)
 - !neuronactivate / !neurondeactivate: admins turn AI chat on or off in a channel (it can be on in several channels)

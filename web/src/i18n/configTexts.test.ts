@@ -2,7 +2,7 @@ import { expect, it } from "vitest";
 import { en, type TextKey } from "./en";
 import { vi as vietnamese } from "./vi";
 
-// The settings the bot lets the web UI change: the same 31 names as CONFIG_GROUPS in web_api/config_fields.rb.
+// The settings the bot lets the web UI change: the same 35 names as CONFIG_GROUPS in web_api/config_fields.rb.
 const CONFIG_NAMES = [
   "OPENAI_REASONING_EFFORT",
   "OPENAI_FALLBACK_REASONING_EFFORT",
@@ -35,13 +35,17 @@ const CONFIG_NAMES = [
   "RECENT_ACTIVITY_MAX_LINES",
   "RECENT_ACTIVITY_MAX_PER_CHANNEL",
   "RECENT_ACTIVITY_ANSWER_CHARS",
+  "MUSIC_ENABLED",
+  "MUSIC_IDLE_LEAVE_SECONDS",
+  "MUSIC_PLAYLIST_LIMIT",
+  "MUSIC_QUEUE_SHOW",
 ];
-const GROUPS = ["chat", "history", "tools", "search", "buildmemory", "clear", "recent"];
+const GROUPS = ["chat", "history", "tools", "search", "buildmemory", "clear", "recent", "music"];
 
 const dictionaries: Record<string, Record<string, string>> = { en, vi: vietnamese };
 
 it("has a label and a help text for every setting, in both languages", () => {
-  expect(CONFIG_NAMES).toHaveLength(31);
+  expect(CONFIG_NAMES).toHaveLength(35);
   for (const [language, dictionary] of Object.entries(dictionaries)) {
     for (const name of CONFIG_NAMES) {
       expect(dictionary[`config.${name}.label`], `${language} label of ${name}`).toBeTruthy();

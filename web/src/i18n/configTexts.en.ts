@@ -20,6 +20,7 @@ export const configEn = {
   "config.group.search": "Searching memory and old messages",
   "config.group.buildmemory": "!buildmemory",
   "config.group.clear": "!clear",
+  "config.group.music": "Music",
   "config.group.recent": "Recent activity in other channels",
 
   // --- AI replies ---
@@ -91,6 +92,16 @@ export const configEn = {
   "config.CLEAR_SCAN_MESSAGES.help": "With !clear @user: how far back to look for that person's messages.",
   "config.CLEAR_REPORT_SECONDS.label": "Seconds the report stays",
   "config.CLEAR_REPORT_SECONDS.help": "The \"Deleted N messages\" note disappears after this long.",
+
+  // --- Music ---
+  "config.MUSIC_ENABLED.label": "Music",
+  "config.MUSIC_ENABLED.help": "Turn all music commands on or off. When off, Cake answers that music is turned off.",
+  "config.MUSIC_IDLE_LEAVE_SECONDS.label": "Seconds before leaving voice",
+  "config.MUSIC_IDLE_LEAVE_SECONDS.help": "How long Cake stays in voice after the queue ends.",
+  "config.MUSIC_PLAYLIST_LIMIT.label": "Songs taken from a playlist",
+  "config.MUSIC_PLAYLIST_LIMIT.help": "The most songs added from one playlist link.",
+  "config.MUSIC_QUEUE_SHOW.label": "Songs shown in the queue",
+  "config.MUSIC_QUEUE_SHOW.help": "How many upcoming songs the queue message lists.",
 
   // --- Recent activity in other channels ---
   "config.RECENT_ACTIVITY_HOURS.label": "Hours to remember",

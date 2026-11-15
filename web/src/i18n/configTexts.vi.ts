@@ -20,6 +20,7 @@ export const configVi: Record<keyof typeof configEn, string> = {
   "config.group.search": "Tìm trong bộ nhớ và tin nhắn cũ",
   "config.group.buildmemory": "!buildmemory",
   "config.group.clear": "!clear",
+  "config.group.music": "Nhạc",
   "config.group.recent": "Gần đây ở kênh khác",
 
   // --- Câu trả lời của AI ---
@@ -90,6 +91,16 @@ export const configVi: Record<keyof typeof configEn, string> = {
   "config.CLEAR_SCAN_MESSAGES.help": "Với !clear @user: tìm tin của người đó ngược về bao xa.",
   "config.CLEAR_REPORT_SECONDS.label": "Số giây hiện báo cáo",
   "config.CLEAR_REPORT_SECONDS.help": "Dòng \"Deleted N messages\" tự biến mất sau chừng này giây.",
+
+  // --- Nhạc ---
+  "config.MUSIC_ENABLED.label": "Nhạc",
+  "config.MUSIC_ENABLED.help": "Bật hoặc tắt toàn bộ lệnh nhạc. Khi tắt, Cake sẽ trả lời là nhạc đang tắt.",
+  "config.MUSIC_IDLE_LEAVE_SECONDS.label": "Số giây trước khi rời voice",
+  "config.MUSIC_IDLE_LEAVE_SECONDS.help": "Cake ở lại kênh voice bao lâu sau khi hết hàng đợi.",
+  "config.MUSIC_PLAYLIST_LIMIT.label": "Số bài lấy từ playlist",
+  "config.MUSIC_PLAYLIST_LIMIT.help": "Số bài nhiều nhất được thêm từ một link playlist.",
+  "config.MUSIC_QUEUE_SHOW.label": "Số bài hiện trong hàng đợi",
+  "config.MUSIC_QUEUE_SHOW.help": "Tin nhắn hàng đợi liệt kê bao nhiêu bài sắp phát.",
 
   // --- Gần đây ở kênh khác ---
   "config.RECENT_ACTIVITY_HOURS.label": "Số giờ ghi nhớ",

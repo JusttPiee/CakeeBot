@@ -25,6 +25,15 @@ class ConfigTest < Minitest::Test
     assert_equal "gpt-test", setting("CAKEE_TEST_SETTING", default: "gpt-6-luna")
   end
 
+  def test_music_defaults
+    assert_equal 'on', MUSIC_ENABLED
+    assert_equal 180, MUSIC_IDLE_LEAVE_SECONDS
+    assert_equal 100, MUSIC_PLAYLIST_LIMIT
+    assert_equal 15, MUSIC_QUEUE_SHOW
+    assert_equal [2, 10, 30], MUSIC_NODE_RESTART_DELAYS
+    assert_equal 60, MUSIC_COMMAND_TIMEOUT_SECONDS
+  end
+
   def test_agreed_defaults
     assert_equal "low", OPENAI_REASONING_EFFORT
     assert_equal "none", OPENAI_FALLBACK_REASONING_EFFORT

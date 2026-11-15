@@ -1,0 +1,13 @@
+{
+  "name": "cakee-music",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@discordjs/voice": "^0.19.2",
+    "discord.js": "^14.28.1"
+  }
+}

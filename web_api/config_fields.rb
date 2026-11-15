@@ -60,6 +60,12 @@ CONFIG_GROUPS = [
     integer_field("RECENT_ACTIVITY_MAX_LINES", 5, 50),
     integer_field("RECENT_ACTIVITY_MAX_PER_CHANNEL", 1, 20),
     integer_field("RECENT_ACTIVITY_ANSWER_CHARS", 50, 500)
+  ] },
+  { id: "music", fields: [
+    choice_field("MUSIC_ENABLED", %w[on off]),
+    integer_field("MUSIC_IDLE_LEAVE_SECONDS", 10, 3600),
+    integer_field("MUSIC_PLAYLIST_LIMIT", 1, 500),
+    integer_field("MUSIC_QUEUE_SHOW", 5, 25)
   ] }
 ].freeze
 

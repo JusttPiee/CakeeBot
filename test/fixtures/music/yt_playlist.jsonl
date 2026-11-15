@@ -1,0 +1,2 @@
+{"id": "aaa", "title": "First Song", "channel": "Some Channel", "duration": 180, "thumbnails": [{"url": "https://i.ytimg.com/vi/aaa/default.jpg"}, {"url": "https://i.ytimg.com/vi/aaa/hqdefault.jpg"}], "url": "https://www.youtube.com/watch?v=aaa", "playlist_id": "PL123", "playlist_title": "My Mix"}
+{"id": "bbb", "title": "Second Song", "uploader": "Other Artist", "duration": 200, "url": "https://www.youtube.com/watch?v=bbb", "playlist_id": "PL123", "playlist_title": "My Mix"}

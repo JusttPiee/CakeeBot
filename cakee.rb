@@ -41,6 +41,8 @@ require_relative './channel_lock' # One lock per channel so messages are handled
 require_relative './channel_reader' # Load recent channel messages when AI mode is turned on
 require_relative './mention_chat' # Answer when @mentioned in any channel
 require_relative './ai_channel_chat' # Answer in AI channels, with long-term memory and compaction
+require_relative './music_commands' # !play, !pause..., the panel buttons, voice watcher
+require_relative './music_controller' # one music player per server
 require_relative './terminal_commands' # Commands typed in the terminal, like /restart
 require_relative './build_memory' # !buildmemory: personality notes from old messages
 require_relative './forget_me' # !forgetme: someone removes what Cake remembers about them
@@ -156,8 +158,15 @@ bot.command(:help) do |event|
     embed.add_field(name: "🧹 `!badword remove [word]`", value: "Removes a word from the bad words list.(Admin only)")
     embed.add_field(name: "📃 `!badword list`", value: "Lists all bad words.(Admin only)")
     embed.add_field(name: "🧹 `!clear [@user] [amount]`", value: "Deletes the newest messages here, or only that user's (max #{CLEAR_MAX_MESSAGES}, Admin only).")
-    embed.add_field(name: "🎮 `!play`", value: "Starts the word chain game.")
-    embed.add_field(name: "🛑 `!stop`", value: "Stops the word chain game.")
+    embed.add_field(name: "🎮 `!wordchain`", value: "Starts the word chain game.")
+    embed.add_field(name: "🛑 `!wordstop`", value: "Stops the word chain game.")
+    embed.add_field(name: "🎵 `!play <link or name>`", value: "Plays music from YouTube, SoundCloud or Spotify in your voice channel (or adds it to the queue).")
+    embed.add_field(name: "⏯ `!pause` / `!resume`", value: "Pauses or resumes the music.")
+    embed.add_field(name: "⏭ `!skip`", value: "Skips the current song.")
+    embed.add_field(name: "⏩ `!skipplaylist`", value: "Skips the rest of the current playlist.")
+    embed.add_field(name: "📜 `!queue`", value: "Shows the songs waiting.")
+    embed.add_field(name: "🗑 `!clearqueue`", value: "Removes the waiting songs; the current song keeps playing.")
+    embed.add_field(name: "⏹ `!stop`", value: "Stops the music and leaves the voice channel (admins can use it from anywhere).")
     embed.add_field(name: "🤝 `!invite`", value: "Get the bot invite link.")
     embed.add_field(name: "🧠 `!neuronactivate`", value: "Activates AI mode in the current channel (Admin only). Can be on in several channels at once.")
     embed.add_field(name: "🧠 `!neurondeactivate`", value: "Deactivates AI mode in the current channel (Admin only).")
@@ -175,7 +184,9 @@ BOT_PERMISSIONS = 1024 +  # View Channels
                   2048 +  # Send Messages
                   16384 + # Embed Links (!help, !invite, neuron mode messages)
                   8192 +  # Manage Messages (!clear)
-                  65536   # Read Message History
+                  65536 + # Read Message History
+                  1048576 + # Connect (music)
+                  2097152   # Speak (music)
 
 bot.command(:invite) do |event| # Command to get the bot invite link
   invite_url = ENV['DISCORD_INVITE_URL'].to_s.strip # Custom invite link from .env (optional)
@@ -360,7 +371,7 @@ def word_chain_game(bot) #Code for the word chain game
   last_letter = nil
   last_user_id = nil
   wrong_attempts = 0
-  bot.command(:play) do |event| #Starts the game
+  bot.command(:wordchain) do |event| # Starts the game
     ai_config_path = 'ai_config.txt' # Path to the AI channel ID file
     if ai_channel?(ai_config_path, event.channel.id) # If AI mode is active in the channel, prevent starting the game
       event.respond "⚠️ Neuron mode is currently active in this channel. Please deactivate it using `!neurondeactivate` before playing the game." # Send a warning message if AI mode is active
@@ -377,7 +388,7 @@ def word_chain_game(bot) #Code for the word chain game
       end
     end
 
-  bot.command(:stop) do |event| # Command to stop the game
+  bot.command(:wordstop) do |event| # Command to stop the game
     if game_active # If a game is active, set game_active to false and respond with a message
       game_active = false
       event.respond "🛑 Word chain game stopped."
@@ -540,13 +551,56 @@ end
 
 word_chain_game(bot) #preload the word chain game function
 
+# Music. The handlers return nil, because discordrb would post any other return value in the chat.
+music = nil # the bridge's events go to the controller, which is made right after the bridge
+music_bridge = MusicBridge.new(on_event: ->(event) { music.handle_event(event) })
+music = MusicController.new(bridge: music_bridge, poster: MusicPanelPoster.new)
+
+MUSIC_COMMAND_ACTIONS = %i[play pause resume skip skipplaylist queue clearqueue stop].freeze
+MUSIC_COMMAND_ACTIONS.each do |action|
+  bot.command(action) do |event, *args|
+    music_command(event, action, args, music)
+    nil
+  end
+end
+
+bot.button(custom_id: /\Amusic:/) do |event| # the panel buttons
+  music_button(event, music)
+  nil
+end
+
+bot.voice_state_update do |event| # Cake leaves when nobody else is in its voice channel
+  music_voice_update(event, music)
+  nil
+end
+
 ensure_personality_file # so it exists to edit from the first run, before anyone chats
+
+MUSIC_START_STATE = { started: false }
+
+# Starts the music process (Node), or says in the log why not.
+# Discord's "ready" event fires after every reconnect, so this only does its work the first time
+# (the bridge restarts Node by itself when it crashes).
+def start_music(music_bridge)
+  return if MUSIC_START_STATE[:started]
+
+  MUSIC_START_STATE[:started] = true
+  return log("🎵 Music off (MUSIC_ENABLED)") unless MUSIC_ENABLED == 'on'
+
+  missing = music_missing_parts
+  return log("🎵 Music off: missing #{missing.join(', ')}") unless missing.empty?
+
+  music_bridge.start
+rescue StandardError => e
+  log "🎵 Music could not start (#{e.class}): #{e.message}"
+end
 
 # Only announce we're alive once Discord has actually accepted the token and connected
 bot.ready do |event|
   log "🤖 Cake is alive! Logged in as #{event.bot.profile.distinct} in #{event.bot.servers.size} server(s)"
   restore_ai_memory(event.bot, bot_state[:histories], load_ai_channels(ai_config_path)) # remember the AI chats after a restart
   start_memory_tidy_once(client, event.bot, bot_state[:histories]) # here, because sending memory questions needs the connection
+  start_music(music_bridge) # here too: Node logs in with the same token
   start_web_ui(event.bot, client, bot_state[:histories], ai_config_path, ENV_FILE) # here, because it lists the bot's servers
 end
 
@@ -554,7 +608,7 @@ bot.disconnected do
   log "🔌 Disconnected from Discord (it will try to reconnect automatically)"
 end
 
-start_terminal_commands(terminal_commands(bot))
+start_terminal_commands(terminal_commands(bot, music_bridge))
 
 log "⏳ Connecting to Discord..."
 bot.run

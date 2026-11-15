@@ -79,6 +79,20 @@ class TerminalCommandsTest < Minitest::Test
     assert flushed_before_exit
   end
 
+  def test_restart_stops_the_music_bridge_too
+    bridge = Struct.new(:stopped) { def stop = (self.stopped = true) }.new(false)
+    restart_bot(FakeBot.new, ->(_code) {}, bridge)
+    assert bridge.stopped
+  end
+
+  def test_restart_still_exits_if_the_music_bridge_fails_to_stop
+    bridge = Object.new
+    def bridge.stop = raise(IOError, "closed")
+    codes = []
+    restart_bot(FakeBot.new, ->(code) { codes << code }, bridge)
+    assert_equal [RESTART_EXIT_CODE], codes
+  end
+
   def test_restart_still_exits_if_stopping_fails
     codes = []
     restart_bot(BrokenBot.new, ->(code) { codes << code })

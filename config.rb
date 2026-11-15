@@ -130,6 +130,16 @@ CLEAR_MAX_MESSAGES = saved_setting('CLEAR_MAX_MESSAGES', 100) # Discord deletes 
 CLEAR_SCAN_MESSAGES = saved_setting('CLEAR_SCAN_MESSAGES', 500) # with a person: how far back to look for their messages
 CLEAR_REPORT_SECONDS = saved_setting('CLEAR_REPORT_SECONDS', 5) # the "Deleted N messages" note disappears after this long
 
+# Voice music (music/ folder and music_*.rb files)
+MUSIC_ENABLED = saved_setting('MUSIC_ENABLED', 'on') # 'on' or 'off': off makes every music command say music is turned off
+MUSIC_IDLE_LEAVE_SECONDS = saved_setting('MUSIC_IDLE_LEAVE_SECONDS', 180) # Cake leaves voice this long after the queue ends
+MUSIC_PLAYLIST_LIMIT = saved_setting('MUSIC_PLAYLIST_LIMIT', 100) # the most songs taken from one playlist link
+MUSIC_QUEUE_SHOW = saved_setting('MUSIC_QUEUE_SHOW', 15) # how many songs the queue message lists
+MUSIC_NODE_RESTART_DELAYS = [2, 10, 30].freeze # seconds to wait before each restart of the music process; give up after the third failed restart within 5 minutes
+MUSIC_COMMAND_TIMEOUT_SECONDS = 60 # one yt-dlp call is stopped after this long
+MUSIC_MAX_FAILURES_IN_A_ROW = 3 # after this many songs fail one after another, the music stops (something is broken)
+MUSIC_NOTE_SECONDS = 10 # short music notes ("Nothing to skip.", "Could not play ...") delete themselves after this long
+
 # Shared recent memory (recent_activity.rb): what happened around Cake lately in every channel, in RAM only.
 # It goes into every reply's prompt as "Recently, in other channels", so keep it short.
 RECENT_ACTIVITY_HOURS = saved_setting('RECENT_ACTIVITY_HOURS', 2) # older lines are dropped
