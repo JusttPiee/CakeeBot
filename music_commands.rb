@@ -20,12 +20,16 @@ MUSIC_BUTTON_ACTIONS = {
   'music:skip' => :skip,
   'music:skipplaylist' => :skipplaylist,
   'music:queue' => :queue,
-  'music:clearqueue' => :clearqueue
+  'music:clearqueue' => :clearqueue,
+  'music:voldown' => :voldown,
+  'music:volup' => :volup
 }.freeze
+
+MUSIC_VOLUME_USAGE = "Usage: `!volume <0-100>`"
 
 # --- commands ---
 
-# One music command (!play, !pause, !resume, !skip, !skipplaylist, !queue, !clearqueue, !stop). Returns nil.
+# One music command (!play, !volume, !pause, !resume, !skip, !skipplaylist, !queue, !clearqueue, !stop). Returns nil.
 # parts and finder are only replaced in tests.
 def music_command(event, action, args, controller, parts: method(:music_missing_parts), finder: method(:find_music))
   return nil if event.server.nil?
@@ -33,6 +37,8 @@ def music_command(event, action, args, controller, parts: method(:music_missing_
 
   if action == :play
     music_play(event, args, controller, finder)
+  elsif action == :volume
+    music_volume(event, args, controller)
   else
     music_control(event, action, controller)
   end
@@ -123,6 +129,31 @@ def music_control(event, action, controller)
   music_note(event, note) if note
 end
 
+# !volume 30 sets the level, !volume alone shows it. Same rule as the other controls:
+# only people in Cake's voice channel
+def music_volume(event, args, controller)
+  problem = music_user_problem(event, :volume, controller)
+  return music_note(event, problem) if problem
+
+  guild_id = event.server.id
+  return music_note(event, music_volume_text(controller.volume(guild_id))) if args.empty?
+
+  level = music_volume_level(args.first)
+  return music_note(event, MUSIC_VOLUME_USAGE) if level.nil?
+
+  music_note(event, music_volume_text(controller.set_volume(guild_id, level)))
+end
+
+# "30" or "30%" => 30. Anything else => nil
+def music_volume_level(text)
+  Integer(text.to_s.delete_suffix('%'), 10, exception: false)
+end
+
+# "🔊 Volume: 30%", or "Nothing is playing." when Cake is not in voice (the level is nil)
+def music_volume_text(level)
+  level ? "🔊 Volume: #{level}%" : "🎵 Nothing is playing."
+end
+
 # Why this user cannot control the music, or nil
 def music_user_problem(event, action, controller)
   admin = music_admin?(event.user)
@@ -145,6 +176,8 @@ def music_run_action(action, guild_id, controller)
   when :skipplaylist then music_do_and_say_nothing { controller.skip_playlist(guild_id) }
   when :clearqueue then music_do_and_say_nothing { controller.clear_queue(guild_id) }
   when :stop then music_do_and_say_nothing { controller.stop(guild_id) }
+  when :voldown then controller.change_volume(guild_id, -MUSIC_VOLUME_STEP) ? nil : "🎵 Nothing is playing."
+  when :volup then controller.change_volume(guild_id, MUSIC_VOLUME_STEP) ? nil : "🎵 Nothing is playing."
   end
 end
 

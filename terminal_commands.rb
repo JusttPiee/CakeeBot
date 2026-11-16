@@ -1,5 +1,8 @@
 # Commands typed in the terminal where the bot runs. To add one, add it to terminal_commands below.
 require 'timeout'
+require 'io/wait' # IO#wait_readable for the terminal (see next_terminal_line)
+
+TERMINAL_CHECK_SECONDS = 0.5 # how often the terminal is checked for a typed line
 
 # start.bat starts the bot again when it exits with this code
 RESTART_EXIT_CODE = 42
@@ -17,10 +20,29 @@ end
 # Stops when there is no more input (e.g. the bot was started without a terminal).
 def start_terminal_commands(commands, input = $stdin)
   Thread.new do
-    while (line = input.gets)
+    while (line = next_terminal_line(input))
       handle_terminal_line(line, commands)
     end
+    log "⌨️ Terminal commands stopped: the terminal input ended"
+  rescue StandardError => e
+    log "⌨️ Terminal commands stopped: #{e.class}: #{e.message}"
   end
+end
+
+# Waits until something was typed, and only then reads the line.
+# Why not just input.gets: on Windows, a thread that is already waiting inside gets never wakes up
+# again once Ruby starts a child process, and the bot starts Node and yt-dlp (music). Asking
+# "was anything typed?" every TERMINAL_CHECK_SECONDS and calling gets only then avoids it.
+# Inputs without wait_readable (files in tests) are read straight away.
+def next_terminal_line(input)
+  if input.respond_to?(:wait_readable)
+    sleep_until_typed(input)
+  end
+  input.gets
+end
+
+def sleep_until_typed(input)
+  loop { break if input.wait_readable(TERMINAL_CHECK_SECONDS) }
 end
 
 def handle_terminal_line(line, commands)

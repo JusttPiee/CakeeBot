@@ -2,7 +2,9 @@ import { spawn } from "node:child_process";
 import { PassThrough } from "node:stream";
 
 // Starts yt-dlp (downloads the audio of a page) and ffmpeg (converts it to
-// Ogg/Opus, which Discord can play). Returns a Readable stream of the audio.
+// raw sound samples). Returns a Readable stream of the audio.
+// Raw samples (not ready-made Opus) let the player change the volume in the
+// middle of a song; @discordjs/voice then encodes them to Opus itself.
 //
 // A "pipe" connects one program's output to the next program's input:
 //   yt-dlp output  ->  ffmpeg input,   ffmpeg output  ->  the stream we return.
@@ -12,11 +14,7 @@ export function openStream(url) {
   const output = new PassThrough();
 
   const ytdlp = spawn("yt-dlp", ytdlpArgs(url), { stdio: ["ignore", "pipe", "pipe"] });
-  const ffmpeg = spawn(
-    "ffmpeg",
-    ["-loglevel", "error", "-i", "pipe:0", "-c:a", "libopus", "-b:a", "128k", "-f", "ogg", "pipe:1"],
-    { stdio: ["pipe", "pipe", "pipe"] }
-  );
+  const ffmpeg = spawn("ffmpeg", ffmpegArgs(), { stdio: ["pipe", "pipe", "pipe"] });
 
   watchProgram(ytdlp, "yt-dlp", output);
   watchProgram(ffmpeg, "ffmpeg", output);
@@ -32,6 +30,12 @@ export function openStream(url) {
   });
 
   return output;
+}
+
+// The arguments for ffmpeg: read from yt-dlp, write raw 16-bit stereo samples
+// at 48000 per second, which is the format Discord voice uses.
+export function ffmpegArgs() {
+  return ["-loglevel", "error", "-i", "pipe:0", "-f", "s16le", "-ar", "48000", "-ac", "2", "pipe:1"];
 }
 
 // The arguments for yt-dlp. "--" means "no more options after this", so a url

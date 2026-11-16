@@ -40,6 +40,9 @@ class FakeController
   def skip_playlist(_guild_id) = record(:skip_playlist, 0)
   def clear_queue(_guild_id) = record(:clear_queue, 0)
   def stop(_guild_id) = record(:stop, nil)
+  def volume(_guild_id) = @voice_channel ? 50 : nil
+  def set_volume(_guild_id, level) = record([:set_volume, level], @voice_channel ? level.clamp(0, 100) : nil)
+  def change_volume(_guild_id, step) = record([:change_volume, step], @voice_channel ? 50 + step : nil)
 
   private
 
@@ -356,6 +359,58 @@ class MusicCommandsTest < Minitest::Test
       music_button(event, controller, parts: NO_PARTS_MISSING)
       assert_equal [call], controller.calls
     end
+  end
+
+  def test_volume_buttons_step_the_volume
+    { "music:voldown" => [:change_volume, -MUSIC_VOLUME_STEP], "music:volup" => [:change_volume, MUSIC_VOLUME_STEP] }.each do |id, call|
+      event = MusicButtonEvent.new(id, 20)
+      controller = FakeController.new(voice_channel: 20)
+      music_button(event, controller, parts: NO_PARTS_MISSING)
+      assert_equal [call], controller.calls
+      assert event.deferred
+      assert_empty event.followups
+    end
+  end
+
+  def test_volume_button_from_outside_voice_is_refused
+    event = MusicButtonEvent.new("music:volup", nil)
+    controller = FakeController.new(voice_channel: 20)
+    music_button(event, controller, parts: NO_PARTS_MISSING)
+    assert_empty controller.calls
+    assert event.responses.last[:ephemeral]
+  end
+
+  # --- !volume ---
+
+  def test_volume_command_sets_the_level
+    event = MusicCommandEvent.new(20)
+    controller = FakeController.new(voice_channel: 20)
+    run_command(event, :volume, ["30"], controller)
+    assert_equal [[:set_volume, 30]], controller.calls
+    assert_equal ["🔊 Volume: 30%"], event.channel.temporary.map(&:first)
+  end
+
+  def test_volume_command_without_a_number_shows_the_level
+    event = MusicCommandEvent.new(20)
+    controller = FakeController.new(voice_channel: 20)
+    run_command(event, :volume, [], controller)
+    assert_empty controller.calls
+    assert_equal ["🔊 Volume: 50%"], event.channel.temporary.map(&:first)
+  end
+
+  def test_volume_command_with_a_bad_number_shows_usage
+    event = MusicCommandEvent.new(20)
+    controller = FakeController.new(voice_channel: 20)
+    run_command(event, :volume, ["loud"], controller)
+    assert_empty controller.calls
+    assert_equal ["Usage: `!volume <0-100>`"], event.channel.temporary.map(&:first)
+  end
+
+  def test_volume_command_needs_cakes_voice_channel
+    event = MusicCommandEvent.new(10)
+    controller = FakeController.new(voice_channel: 20)
+    run_command(event, :volume, ["30"], controller)
+    assert_empty controller.calls
   end
 
   def test_button_when_unavailable_is_private

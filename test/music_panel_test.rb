@@ -63,8 +63,19 @@ class MusicPanelTest < Minitest::Test
     assert_includes description, "[Hi (live) (2)](https://y/1?a=%28b%29)"
   end
 
+  def test_embed_shows_the_volume
+    track = MusicTrack.new(title: "Song", url: "https://y/1")
+    assert_includes music_panel_embed(track, 0, false, 40).description, "🔊 40%"
+    refute_includes music_panel_embed(track, 0, false).description, "%"
+  end
+
+  def test_volume_buttons_are_on_a_second_row
+    rows = music_panel_view(false).to_a
+    assert_equal %w[music:voldown music:volup], rows[1][:components].map { |c| c[:custom_id] }
+  end
+
   def test_buttons_and_toggle_label
-    ids = music_panel_view(false).to_a.flat_map { |row| row[:components].map { |c| c[:custom_id] } }
+    ids = music_panel_view(false).to_a.first[:components].map { |c| c[:custom_id] }
     assert_equal %w[music:toggle music:skip music:skipplaylist music:queue music:clearqueue], ids
     assert_equal "Resume", music_panel_view(true).to_a.first[:components].first[:label]
     assert_equal "Pause", music_panel_view(false).to_a.first[:components].first[:label]

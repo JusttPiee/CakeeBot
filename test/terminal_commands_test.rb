@@ -54,6 +54,46 @@ class TerminalCommandsTest < Minitest::Test
     assert_equal ["/test", "/test"], @ran
   end
 
+# A terminal that says "nothing typed yet" a few times before each line, like a real window.
+# It remembers whether gets was ever called while nothing was typed.
+class SlowTerminal
+  attr_reader :gets_while_empty
+
+  def initialize(lines, empty_checks)
+    @lines = lines
+    @empty_checks = empty_checks
+    @left = empty_checks
+    @typed = false # becomes true once wait_readable reported a typed line
+    @gets_while_empty = false
+  end
+
+  def tty? = true
+
+  # nil (nothing typed) a few times, then self (a line is waiting)
+  def wait_readable(_seconds)
+    return nil if (@left -= 1).positive?
+
+    @left = @empty_checks
+    @typed = true
+    self
+  end
+
+  def gets
+    @gets_while_empty = true unless @typed
+    @typed = false
+    @lines.shift
+  end
+end
+
+  # On Windows a thread waiting inside gets never wakes up once Ruby starts a child process
+  # (Node, yt-dlp), so gets may only be called when something was typed
+  def test_gets_is_only_called_after_something_was_typed
+    terminal = SlowTerminal.new(["/test\n", "/test\n"], 3)
+    start_terminal_commands(@commands, terminal).join
+    assert_equal ["/test", "/test"], @ran
+    refute terminal.gets_while_empty
+  end
+
   def test_restart_is_in_the_command_list
     assert_includes terminal_commands(FakeBot.new).keys, "/restart"
   end

@@ -534,7 +534,7 @@ music = nil # the bridge's events go to the controller, which is made right afte
 music_bridge = MusicBridge.new(on_event: ->(event) { music.handle_event(event) })
 music = MusicController.new(bridge: music_bridge, poster: MusicPanelPoster.new)
 
-MUSIC_COMMAND_ACTIONS = %i[play pause resume skip skipplaylist queue clearqueue stop].freeze
+MUSIC_COMMAND_ACTIONS = %i[play volume pause resume skip skipplaylist queue clearqueue stop].freeze
 MUSIC_COMMAND_ACTIONS.each do |action|
   bot.command(action) do |event, *args|
     music_command(event, action, args, music)

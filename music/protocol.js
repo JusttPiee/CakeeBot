@@ -1,7 +1,7 @@
 // The "protocol" is how Ruby and this program talk: one JSON object per line.
 // Ruby writes commands to our stdin, we write events to our stdout.
 
-const KNOWN_OPS = ["join", "play", "pause", "resume", "stop", "leave"];
+const KNOWN_OPS = ["join", "play", "pause", "resume", "stop", "leave", "volume"];
 
 // Turns one line of text from Ruby into a command object.
 // Returns null when the line is not valid JSON, has an unknown op, or has no guild.

@@ -101,6 +101,9 @@ export const configVi: Record<keyof typeof configEn, string> = {
   "config.MUSIC_PLAYLIST_LIMIT.help": "Số bài nhiều nhất được thêm từ một link playlist.",
   "config.MUSIC_QUEUE_SHOW.label": "Số bài hiện trong hàng đợi",
   "config.MUSIC_QUEUE_SHOW.help": "Tin nhắn hàng đợi liệt kê bao nhiêu bài sắp phát.",
+  "config.MUSIC_DEFAULT_VOLUME.label": "Âm lượng ban đầu (%)",
+  "config.MUSIC_DEFAULT_VOLUME.help":
+    "Mức âm lượng mỗi lần Cake vào voice, từ 0 đến 100 (100 = âm lượng gốc). Người trong voice có thể đổi bằng !volume hoặc nút 🔉 / 🔊.",
 
   // --- Gần đây ở kênh khác ---
   "config.RECENT_ACTIVITY_HOURS.label": "Số giờ ghi nhớ",

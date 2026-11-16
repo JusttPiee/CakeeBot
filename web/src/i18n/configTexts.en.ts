@@ -102,6 +102,9 @@ export const configEn = {
   "config.MUSIC_PLAYLIST_LIMIT.help": "The most songs added from one playlist link.",
   "config.MUSIC_QUEUE_SHOW.label": "Songs shown in the queue",
   "config.MUSIC_QUEUE_SHOW.help": "How many upcoming songs the queue message lists.",
+  "config.MUSIC_DEFAULT_VOLUME.label": "Starting volume (%)",
+  "config.MUSIC_DEFAULT_VOLUME.help":
+    "The volume Cake starts at each time it joins voice, from 0 to 100 (100 = the original loudness). People in voice can change it with !volume or the 🔉 / 🔊 buttons.",
 
   // --- Recent activity in other channels ---
   "config.RECENT_ACTIVITY_HOURS.label": "Hours to remember",

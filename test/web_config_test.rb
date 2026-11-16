@@ -12,14 +12,14 @@ class WebConfigTest < WebApiTest
 
   def test_every_field_has_a_default_from_config_rb
     names = CONFIG_GROUPS.flat_map { |group| group[:fields].map { |field| field[:name] } }
-    assert_equal 35, names.length
+    assert_equal 36, names.length
     assert_empty names - CONFIG_DEFAULTS.keys
     assert_equal names.uniq, names
   end
 
   def test_music_group_is_listed
     group = CONFIG_GROUPS.find { |g| g[:id] == "music" }
-    assert_equal %w[MUSIC_ENABLED MUSIC_IDLE_LEAVE_SECONDS MUSIC_PLAYLIST_LIMIT MUSIC_QUEUE_SHOW], group[:fields].map { |f| f[:name] }
+    assert_equal %w[MUSIC_ENABLED MUSIC_IDLE_LEAVE_SECONDS MUSIC_PLAYLIST_LIMIT MUSIC_QUEUE_SHOW MUSIC_DEFAULT_VOLUME], group[:fields].map { |f| f[:name] }
     assert_equal %w[on off], group[:fields].first[:options]
   end
 

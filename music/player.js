@@ -3,15 +3,17 @@ import { openStream } from "./stream.js";
 import { getSession } from "./voice.js";
 import { sendEvent, log } from "./protocol.js";
 import { NOT_CONNECTED_REASON } from "./reasons.js";
+import { clampVolume, volumeGain } from "./volume.js";
 
-// Starts playing the audio of `url` in the server's voice channel.
+// Starts playing the audio of `url` in the server's voice channel, at `volume` (0-100).
 // Sends "started", then "finished" (or "failed" if the song cannot play).
-export function playUrl(guildId, url) {
+export function playUrl(guildId, url, volume) {
   const session = getSession(guildId);
   if (!session) {
     sendEvent("failed", { guild: guildId, reason: NOT_CONNECTED_REASON });
     return;
   }
+  session.volume = clampVolume(volume, session.volume ?? 50);
   // A new song replaces the old one; the old one is dropped without any event.
   session.song?.kill();
 
@@ -22,8 +24,19 @@ export function playUrl(guildId, url) {
   song.stream = stream;
   stream.on("error", (err) => endSong(song, "failed", err.message));
 
-  const resource = createAudioResource(stream, { inputType: StreamType.OggOpus });
+  // Raw samples + inlineVolume: the volume can be changed while the song plays
+  const resource = createAudioResource(stream, { inputType: StreamType.Raw, inlineVolume: true });
+  resource.volume.setVolume(volumeGain(session.volume));
+  song.resource = resource;
   session.player.play(resource);
+}
+
+// Changes the volume (0-100) right away, and remembers it for the server's next songs.
+export function setVolume(guildId, volume) {
+  const session = getSession(guildId);
+  if (!session) return;
+  session.volume = clampVolume(volume, session.volume ?? 50);
+  session.song?.resource?.volume?.setVolume(volumeGain(session.volume));
 }
 
 export function pause(guildId) {

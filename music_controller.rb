@@ -103,6 +103,29 @@ class MusicController
     end
   end
 
+  # The server's volume (0-100), or nil when Cake is not in voice there
+  def volume(guild_id)
+    with_lock('volume') do |_later|
+      state = @servers[guild_id]
+      state&.voice_channel_id ? state.volume : nil
+    end
+  end
+
+  # !volume 30: sets an exact level. Returns the new level, or nil when Cake is not in voice
+  def set_volume(guild_id, level)
+    with_lock('set_volume') do |later|
+      volume_locked(@servers[guild_id], guild_id, level, later)
+    end
+  end
+
+  # The 🔉 / 🔊 buttons: moves the level by `step` (e.g. -10). Returns the new level, or nil when not in voice
+  def change_volume(guild_id, step)
+    with_lock('change_volume') do |later|
+      state = @servers[guild_id]
+      volume_locked(state, guild_id, state.volume + step, later) if state
+    end
+  end
+
   # Skips the current song. false when there is nothing to skip (or a skip is already on its way)
   def skip(guild_id)
     with_lock('skip', false) do |later|
@@ -221,7 +244,20 @@ class MusicController
   end
 
   def send_play(state, guild_id, track)
-    state.song_sent = @bridge.send_command('play', guild: guild_id, url: track.url)
+    state.song_sent = @bridge.send_command('play', guild: guild_id, url: track.url, volume: state.volume)
+  end
+
+  # --- volume ---
+
+  # Sets the server's volume (kept between 0 and 100), tells Node at once and refreshes the panel.
+  # Returns the new level, or nil when Cake is not in voice
+  def volume_locked(state, guild_id, level, later)
+    return nil unless state&.voice_channel_id
+
+    state.volume = level.to_i.clamp(0, 100)
+    @bridge.send_command('volume', guild: guild_id, volume: state.volume)
+    later << -> { refresh_panel(guild_id) }
+    state.volume
   end
 
   # --- songs without a url (Spotify): search YouTube when their turn comes ---

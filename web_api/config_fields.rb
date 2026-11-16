@@ -65,7 +65,8 @@ CONFIG_GROUPS = [
     choice_field("MUSIC_ENABLED", %w[on off]),
     integer_field("MUSIC_IDLE_LEAVE_SECONDS", 10, 3600),
     integer_field("MUSIC_PLAYLIST_LIMIT", 1, 500),
-    integer_field("MUSIC_QUEUE_SHOW", 5, 25)
+    integer_field("MUSIC_QUEUE_SHOW", 5, 25),
+    integer_field("MUSIC_DEFAULT_VOLUME", 0, 100)
   ] }
 ].freeze
 

@@ -18,6 +18,7 @@ HELP_CATEGORIES = [
   ] },
   { id: "music", emoji: "🎵", title: "Music", commands: [
     ["🎵 `!play <link or name>`", "Plays music from YouTube, SoundCloud or Spotify in your voice channel (or adds it to the queue)."],
+    ["🔊 `!volume [0-100]`", "Sets the volume, or shows it when no number is given. The 🔉 / 🔊 buttons on the panel change it too."],
     ["⏯ `!pause` / `!resume`", "Pauses or resumes the music."],
     ["⏭ `!skip`", "Skips the current song."],
     ["⏩ `!skipplaylist`", "Skips the rest of the current playlist."],

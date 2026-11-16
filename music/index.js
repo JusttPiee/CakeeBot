@@ -4,7 +4,7 @@ import { parseCommandLine, sendEvent, log } from "./protocol.js";
 import { joinChannel, leaveQuietly, leaveAll } from "./voice.js";
 import { createCommandQueue } from "./command_queue.js";
 import { JOIN_FAILED_REASON } from "./reasons.js";
-import { playUrl, pause, resume, stop } from "./player.js";
+import { playUrl, pause, resume, stop, setVolume } from "./player.js";
 
 // This program only plays audio in voice channels. It never reads or sends messages.
 const client = new Client({
@@ -18,7 +18,10 @@ async function handleCommand(command) {
       await joinChannel(client, command.guild, command.channel);
       break;
     case "play":
-      playUrl(command.guild, command.url);
+      playUrl(command.guild, command.url, command.volume);
+      break;
+    case "volume":
+      setVolume(command.guild, command.volume);
       break;
     case "pause":
       pause(command.guild);

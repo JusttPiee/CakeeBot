@@ -19,6 +19,7 @@ A multifunctional Discord bot written in Ruby. It can:
 | `!wordchain` | Everyone | Starts a word chain game |
 | `!wordstop` | Everyone | Stops the word chain game |
 | `!play <link or name>` | Everyone | Plays music in your voice channel, or adds it to the queue |
+| `!volume [0-100]` | Everyone in the voice channel | Sets the music volume right away (shows it when no number is given) |
 | `!pause` / `!resume` | Everyone in the voice channel | Pauses or resumes the music |
 | `!skip` | Everyone in the voice channel | Skips the current song |
 | `!skipplaylist` | Everyone in the voice channel | Skips the rest of the current playlist |
@@ -38,13 +39,13 @@ A multifunctional Discord bot written in Ruby. It can:
 
 **Word chain rules:** each word must be a real English word, can't be reused, and must start with the last letter of the previous word. The same person can't go twice in a row. After 3 wrong attempts, the game ends and the last player with a valid word wins.
 
-**Music:** `!play` takes a YouTube, SoundCloud or Spotify link (a song or a playlist) or just a song name, and plays it in the voice channel you are in. Cake shows a panel with buttons (pause, skip, skip playlist, queue, clear queue) and leaves when the queue ends for a while, or when everyone else leaves the channel. To use it you need:
+**Music:** `!play` takes a YouTube, SoundCloud or Spotify link (a song or a playlist) or just a song name, and plays it in the voice channel you are in. Cake shows a panel with buttons (pause, skip, skip playlist, queue, clear queue, volume down / up) and leaves when the queue ends for a while, or when everyone else leaves the channel. To use it you need:
 
 1. **yt-dlp** and **ffmpeg** installed and on your PATH, plus **Node.js**. Keep yt-dlp updated (`yt-dlp -U`): YouTube changes often, and an old yt-dlp is the usual reason songs stop playing.
 2. The music part installed once: `cd music && npm install`.
 3. The bot needs the *Connect* and *Speak* permissions (the invite link asks for them; if the bot is already in your server, give its role those permissions).
 
-If something is missing, the terminal says so when the bot starts (`🎵 Music off: missing ...`) and the rest of the bot works as usual. Spotify works without a key, but it reads Spotify's public page, so it may break when Spotify changes that page, and it only reads about the first 50 songs of a playlist. Turn music off with `MUSIC_ENABLED` in the web UI settings.
+If something is missing, the terminal says so when the bot starts (`🎵 Music off: missing ...`) and the rest of the bot works as usual. Spotify works without a key, but it reads Spotify's public page, so it may break when Spotify changes that page, and it only reads about the first 50 songs of a playlist. Turn music off with `MUSIC_ENABLED` in the web UI settings; `MUSIC_DEFAULT_VOLUME` (default 50%) is where the volume starts each time Cake joins voice.
 
 **AI chat:** once an admin runs `!neuronactivate`, every message in that channel (except commands) gets an AI reply. The bot knows who is speaking (by nickname and user ID) and remembers the last 45 messages of the conversation (up to about 5,000 tokens), so API costs stay low. When AI mode is turned on, and again when the bot starts, it reads the last 45 messages in the channel so it knows what people were talking about, even after a restart. Replies longer than Discord's 2000-character limit are split into several messages. AI chat can be on in several channels at once, and each channel has its own memory.
 

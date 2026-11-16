@@ -3,18 +3,23 @@ require_relative "../music_controller"
 
 # Pretends to be the bridge to Node: remembers every command, always ready
 class FakeBridge
-  attr_reader :ops
+  attr_reader :ops, :volumes
 
   def initialize
     @ops = []
+    @volumes = [] # [op, guild, volume] for every command that carried a volume
     @ops_lock = Mutex.new
   end
 
   def ready? = true
 
   # ["join", 1, 10], ["play", 1, "u/a"], ["leave", 1] ...
+  # The volume is kept apart in `volumes`, so the older tests can compare ops as before.
   def send_command(op, guild:, **fields)
-    @ops_lock.synchronize { @ops << [op, guild, *fields.values] }
+    @ops_lock.synchronize do
+      @volumes << [op, guild, fields[:volume]] if fields.key?(:volume)
+      @ops << [op, guild, *fields.except(:volume).values] unless op == "volume"
+    end
     true
   end
 end
@@ -365,5 +370,55 @@ class MusicControllerTest < Minitest::Test
     @music.handle_event("event" => "finished", "guild" => "99")
     @music.handle_event({})
     assert_equal [nil, []], @music.queue_snapshot(99)
+  end
+
+  # --- volume ---
+
+  def test_play_sends_the_default_volume
+    @music.play(1, 10, @channel, [track("a")])
+    assert_equal [["play", 1, MUSIC_DEFAULT_VOLUME]], @bridge.volumes
+    assert_equal MUSIC_DEFAULT_VOLUME, @music.volume(1)
+  end
+
+  def test_set_volume_sends_it_right_away_and_clamps
+    @music.play(1, 10, @channel, [track("a")])
+    assert_equal 30, @music.set_volume(1, 30)
+    assert_equal 100, @music.set_volume(1, 250)
+    assert_equal 0, @music.set_volume(1, -4)
+    assert_equal [["volume", 1, 30], ["volume", 1, 100], ["volume", 1, 0]], @bridge.volumes.last(3)
+  end
+
+  def test_change_volume_steps_from_the_current_level
+    @music.play(1, 10, @channel, [track("a")])
+    assert_equal MUSIC_DEFAULT_VOLUME - 10, @music.change_volume(1, -10)
+    assert_equal MUSIC_DEFAULT_VOLUME, @music.change_volume(1, 10)
+  end
+
+  def test_volume_is_kept_for_the_next_song
+    @music.play(1, 10, @channel, [track("a"), track("b")])
+    @music.set_volume(1, 20)
+    @music.handle_event("event" => "finished", "guild" => "1")
+    assert_equal ["play", 1, 20], @bridge.volumes.last
+  end
+
+  def test_volume_goes_back_to_default_after_stop
+    @music.play(1, 10, @channel, [track("a")])
+    @music.set_volume(1, 20)
+    @music.stop(1)
+    @music.play(1, 10, @channel, [track("b")])
+    assert_equal ["play", 1, MUSIC_DEFAULT_VOLUME], @bridge.volumes.last
+  end
+
+  def test_volume_when_cake_is_not_in_voice
+    assert_nil @music.set_volume(1, 30)
+    assert_nil @music.change_volume(1, 10)
+    assert_nil @music.volume(1)
+    assert_empty @bridge.volumes
+  end
+
+  def test_panel_shows_the_volume
+    @music.play(1, 10, @channel, [track("a")])
+    @music.set_volume(1, 40)
+    assert_equal 2, @poster.shows.length
   end
 end

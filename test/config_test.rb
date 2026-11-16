@@ -30,6 +30,7 @@ class ConfigTest < Minitest::Test
     assert_equal 180, MUSIC_IDLE_LEAVE_SECONDS
     assert_equal 100, MUSIC_PLAYLIST_LIMIT
     assert_equal 15, MUSIC_QUEUE_SHOW
+    assert_equal 50, MUSIC_DEFAULT_VOLUME
     assert_equal [2, 10, 30], MUSIC_NODE_RESTART_DELAYS
     assert_equal 60, MUSIC_COMMAND_TIMEOUT_SECONDS
   end

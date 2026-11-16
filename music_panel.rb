@@ -46,11 +46,13 @@ def panel_description_lines(track, waiting_count)
   lines
 end
 
-# The panel for the song that is playing now (or paused)
-def music_panel_embed(track, waiting_count, paused)
+# The panel for the song that is playing now (or paused). volume (0-100) adds a "🔊 50%" line.
+def music_panel_embed(track, waiting_count, paused, volume = nil)
   embed = Discordrb::Webhooks::Embed.new
   embed.title = paused ? "⏸ Paused" : "🎵 Now playing"
-  embed.description = panel_description_lines(track, waiting_count).join("\n")
+  lines = panel_description_lines(track, waiting_count)
+  lines << "🔊 #{volume}%" if volume
+  embed.description = lines.join("\n")
   embed.thumbnail = Discordrb::Webhooks::EmbedThumbnail.new(url: track.thumbnail) if track.thumbnail
   embed
 end
@@ -62,7 +64,8 @@ def music_stopped_embed
   embed
 end
 
-# The buttons under the panel: pause/resume, skip, skip playlist, queue, clear queue
+# The buttons under the panel: pause/resume, skip, skip playlist, queue, clear queue,
+# and on a second row the volume down / up buttons (Discord allows 5 buttons per row)
 def music_panel_view(paused)
   Discordrb::Webhooks::View.new do |view|
     view.row do |row|
@@ -71,6 +74,10 @@ def music_panel_view(paused)
       row.button(style: :secondary, label: "Skip playlist", custom_id: "music:skipplaylist")
       row.button(style: :secondary, label: "Queue", custom_id: "music:queue")
       row.button(style: :danger, label: "Clear queue", custom_id: "music:clearqueue")
+    end
+    view.row do |row|
+      row.button(style: :secondary, label: "🔉 -#{MUSIC_VOLUME_STEP}%", custom_id: "music:voldown")
+      row.button(style: :secondary, label: "🔊 +#{MUSIC_VOLUME_STEP}%", custom_id: "music:volup")
     end
   end
 end
