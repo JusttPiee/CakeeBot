@@ -69,12 +69,21 @@ def messages_after(messages, after_id)
   messages.select { |message| message.id.nil? || message.id > after_id }
 end
 
+# Cake's emojis as Discord sends them back: <:name:id> or <a:name:id>
+DISCORD_EMOJI_PATTERN = /<a?:(\w{2,32}):\d+>/
+
+# Cake's old replies come back from Discord with <:name:id>. Turn them back into the :name: form
+# the AI writes (emoji_library.rb), so the history has one short form only.
+def emoji_names_from_discord(text)
+  text.gsub(DISCORD_EMOJI_PATTERN, ':\1:')
+end
+
 # messages: Discord messages, newest first (the order Discord returns them in)
 def build_history_from_messages(messages, bot_id, max_messages: MAX_HISTORY_MESSAGES, max_tokens: MAX_HISTORY_TOKENS)
   history = []
   messages.reverse.each do |message| # oldest first, like a normal conversation
     from_bot = message.author.id == bot_id
-    text = from_bot ? message.content.to_s.strip : text_with_attachment_markers(message)
+    text = from_bot ? emoji_names_from_discord(message.content.to_s.strip) : text_with_attachment_markers(message)
     next if text.empty? # stickers or embeds only: nothing to give the AI
 
     if from_bot

@@ -22,8 +22,20 @@ def add_user_message(history, name, user_id, text, time = Time.now, message_id: 
 end
 
 # message_id: the Discord message Cake sent (the last one, if the reply was split)
-def add_assistant_message(history, text, message_id: nil)
-  history << { role: "assistant", content: text, message_id: message_id }
+# command: true when Cake ran a command in this answer (see mark_command_turn)
+def add_assistant_message(history, text, message_id: nil, command: false)
+  message = { role: "assistant", content: text, message_id: message_id }
+  message[:command] = true if command
+  history << message
+end
+
+# A command turn: the AI ran a command tool (help, music, clear) for the newest user message.
+# Marks that user message, and returns the answer with the labels under it, e.g.
+# "Done!\n[music: Skipped.]". That text is only stored in the history; Discord gets the plain answer.
+def mark_command_turn(history, labels, answer)
+  newest_user = history.reverse.find { |message| message[:role] == "user" }
+  newest_user[:command] = true if newest_user
+  answer.rstrip + "\n" + labels.join("\n")
 end
 
 # Used when the AI request fails, so the unanswered user message does not stay in memory

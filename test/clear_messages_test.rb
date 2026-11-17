@@ -132,6 +132,15 @@ class ClearMessagesTest < Minitest::Test
     assert_equal [1, command_id].sort, channel.deleted.sort # Pie's only message, 300 messages back
   end
 
+  def test_more_than_100_ids_are_split_and_never_leave_one_alone
+    channel = ClearChannel.new([])
+    delete_message_ids(channel, (1..101).to_a)
+    assert_equal (1..101).to_a.sort, channel.deleted.sort
+    assert_equal 2, channel.delete_calls
+    delete_message_ids(channel, (1..250).to_a)
+    assert_equal 101 + 250, channel.deleted.length
+  end
+
   def test_skips_messages_older_than_14_days
     old = HistoryMessage.new(1, PIE, "old", Time.now - 15 * 24 * 3600)
     event, channel, command_id = clear(["5"], [old] + recent_messages(2).map { |m| HistoryMessage.new(m.id + 1, m.author, m.content, m.creation_time) })

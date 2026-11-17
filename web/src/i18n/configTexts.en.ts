@@ -34,6 +34,10 @@ export const configEn = {
   "config.MAX_TOOL_ROUNDS.label": "Tool rounds per reply",
   "config.MAX_TOOL_ROUNDS.help":
     "One round = the AI asks for tools, Cake runs them and sends the results back. After this many it must answer.",
+  "config.EMOJI_FAVOURITES.label": "Favourite emojis in the prompt",
+  "config.EMOJI_FAVOURITES.help": "Cake's most used custom emojis, listed in every prompt. 0 = none listed.",
+  "config.EMOJI_SUGGESTIONS.label": "Suggested emojis per message",
+  "config.EMOJI_SUGGESTIONS.help": "Custom emojis that fit the newest message, picked by meaning and added to the prompt. 0 = none.",
 
   // --- Chat memory and compaction ---
   "config.MAX_HISTORY_MESSAGES.label": "Messages kept per channel",

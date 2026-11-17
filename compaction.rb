@@ -73,14 +73,25 @@ def compact_history(client, history, server_id, channel_id, bot_name)
   old, _kept = split_for_compaction(history)
   return false if old.empty?
 
-  speakers = speakers_in(old)
+  # Command turns (help, music, clear) are not worth remembering: they are dropped, never summarized
+  to_summarize = old.reject { |message| message[:command] }
+  return drop_command_messages(history, old) if to_summarize.empty?
+
+  speakers = speakers_in(to_summarize)
   current = with_server_memory_lock(server_id) { read_compaction_inputs(server_id, channel_id, speakers) }
-  result = request_compaction(client, build_compaction_input(current, old, bot_name), channel_id, bot_name)
+  result = request_compaction(client, build_compaction_input(current, to_summarize, bot_name), channel_id, bot_name)
   return false if result.nil?
 
   with_server_memory_lock(server_id) { apply_compaction(server_id, channel_id, result, speakers, old, current) }
   history.shift(old.length)
   log "🗜️ Compacted #{old.length} old messages in channel #{channel_id} into the summary"
+  true
+end
+
+# Only command messages were old: no request, no files, just free the space
+def drop_command_messages(history, old)
+  history.shift(old.length)
+  log "🗜️ Dropped #{old.length} old command messages"
   true
 end
 

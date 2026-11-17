@@ -93,10 +93,11 @@ def json_mention_names(raw, channel)
 end
 
 # Up to `max` raw messages, newest first (the order Discord returns them in).
+# start_before_id: only messages older than this one (nil = start from the newest).
 # Raises if Discord refuses (e.g. no "Read Message History" permission): the caller decides what to do.
-def fetch_older_messages(channel, max)
+def fetch_older_messages(channel, max, start_before_id = nil)
   messages = []
-  before_id = nil
+  before_id = start_before_id
   while messages.length < max
     page = channel.raw_history([DISCORD_PAGE_SIZE, max - messages.length].min, before_id)
     messages.concat(page)

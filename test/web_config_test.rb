@@ -12,7 +12,7 @@ class WebConfigTest < WebApiTest
 
   def test_every_field_has_a_default_from_config_rb
     names = CONFIG_GROUPS.flat_map { |group| group[:fields].map { |field| field[:name] } }
-    assert_equal 36, names.length
+    assert_equal 38, names.length
     assert_empty names - CONFIG_DEFAULTS.keys
     assert_equal names.uniq, names
   end

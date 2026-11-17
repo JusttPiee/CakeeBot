@@ -49,6 +49,14 @@ class BuildMemoryTest < Minitest::Test
     assert_equal 3, people["123"][:messages].length
   end
 
+  def test_buildmemory_skips_typed_commands
+    messages = [HistoryMessage.new(1, BACH, "!play x", Time.new(2026, 1, 1)),
+                HistoryMessage.new(2, BACH, "  !skip", Time.new(2026, 1, 2)),
+                HistoryMessage.new(3, BACH, "hello there", Time.new(2026, 1, 3))]
+    person = messages_by_person(plain_test_messages(messages))["123"]
+    assert_equal ["hello there"], person[:messages].map { |message| message[:text] }
+  end
+
   def test_uses_the_newest_name
     old = HistoryMessage.new(1, HistoryAuthor.new(123, "OldName", false), "hi", Time.new(2026, 1, 1))
     new = HistoryMessage.new(2, BACH, "hi", Time.new(2026, 2, 1))

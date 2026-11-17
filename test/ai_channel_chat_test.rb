@@ -12,9 +12,13 @@ class FakeAiEvent
   FakeServer = Struct.new(:id, :bot, :name)
   FakeChannel = Struct.new(:id, :name) do
     def start_typing = nil
+
+    # show_help posts its page here
+    def send_message(*args) = (posted << args) && nil
+    def posted = (@posted ||= [])
   end
   FakeBot = Struct.new(:profile, :token)
-  FakeProfile = Struct.new(:id)
+  FakeProfile = Struct.new(:id, :avatar_url)
 
   attr_reader :sent, :author, :server, :channel, :id
 
@@ -35,9 +39,23 @@ class FakeAiEvent
   def message = self # event.message.id / .content / .reply! / .attachments land here
   def content = @text
 
+  # edits: every text a sent message was edited into, in order
+  def edits = (@edits ||= [])
+
   def reply!(text, mention_user:)
     @sent << { text: text, ping: mention_user }
-    Struct.new(:id).new(@sent.length)
+    FakeSentMessage.new(@sent.length, self)
+  end
+
+  # Editing a sent message changes what `sent` shows, so `sent` is what the channel shows in the end
+  def edited(id, text)
+    edits << text
+    @sent[id - 1][:text] = text
+  end
+
+  # A message Cake sent. edit works like discordrb's Message#edit.
+  FakeSentMessage = Struct.new(:id, :event) do
+    def edit(text) = event.edited(id, text) && self
   end
 end
 
@@ -47,6 +65,38 @@ class AiChannelChatTest < Minitest::Test
   def setup
     clear_test_memory
     LOGS.clear
+  end
+
+  # The Thinking line is sent first, then edited into the answer.
+  # Discord gets the converted emoji, the history keeps the :name: text.
+  def test_reply_goes_into_the_thinking_message
+    history = []
+    event = FakeAiEvent.new("hello")
+    with_bot_emoji("happy", 42) do
+      answer_ai_channel_message(event, FakeClient.new(answers: ["Hi :happy: :nope:"]), history)
+    end
+    assert_equal ["Hi <:happy:42> :nope:"], event.edits
+    assert_equal [{ text: "Hi <:happy:42> :nope:", ping: false }], event.sent # one message: the edited Thinking line
+    assert_equal "Hi :happy: :nope:", history.last[:content]
+    assert_equal 1, history.last[:message_id]
+  end
+
+  # An error nothing catches (not an API error): the Thinking line still turns into the unavailable text,
+  # and the error goes on to discordrb, which logs it
+  def test_a_crash_turns_thinking_into_unavailable
+    event = FakeAiEvent.new("hello")
+    assert_raises(RuntimeError) do
+      answer_ai_channel_message(event, FakeClient.new(error: RuntimeError.new("odd response")), [])
+    end
+    assert_equal [AI_UNAVAILABLE_MESSAGE], event.edits
+    assert_equal 1, event.sent.length
+  end
+
+  def test_unavailable_answer_is_edited_into_thinking
+    event = FakeAiEvent.new("hello")
+    answer_ai_channel_message(event, FakeClient.new(error: Faraday::ConnectionFailed.new("x")), [])
+    assert_equal [AI_UNAVAILABLE_MESSAGE], event.edits
+    assert_equal 1, event.sent.length
   end
 
   def test_reply_is_saved_with_its_discord_id
@@ -188,5 +238,52 @@ class AiChannelChatTest < Minitest::Test
     assert_equal false, entry[:public] # the pretend channel has no permission data: not shared
   ensure
     RECENT_ACTIVITY.clear
+  end
+
+  # --- command turns: the AI ran a command tool (here show_help, which adds "[showed help: Music]") ---
+
+  def help_tool_client(answer = "Here is the music help!")
+    call = { "type" => "function_call", "call_id" => "c1", "name" => "show_help",
+             "arguments" => '{"category":"music"}' }
+    FakeClient.new(answers: [{ tool_calls: [call] }, answer])
+  end
+
+  def test_command_turn_keeps_labels_in_history_not_in_reply
+    history = []
+    event = FakeAiEvent.new("show me the music commands")
+    answer_ai_channel_message(event, help_tool_client, history)
+    assert_equal ["Here is the music help!"], event.sent.map { |sent| sent[:text] }
+    assert_equal "Here is the music help!\n[showed help: Music]", history.last[:content]
+    assert_equal [true, true], history.map { |message| message[:command] }
+    assert_equal 1, event.channel.posted.length # the help page itself was posted
+  end
+
+  def test_command_turn_skips_recent_activity
+    RECENT_ACTIVITY.clear
+    answer_ai_channel_message(FakeAiEvent.new("show me the music commands"), help_tool_client, [])
+    assert_empty all_recent_entries(1)
+  ensure
+    RECENT_ACTIVITY.clear
+  end
+
+  def test_a_normal_turn_has_no_command_mark
+    history = []
+    answer_ai_channel_message(FakeAiEvent.new("hello"), FakeClient.new(answers: ["Hi!"]), history)
+    assert_equal [nil, nil], history.map { |message| message[:command] }
+  end
+
+  # The tool ran, then the answer came back empty. The retry in ask_ai would run the tool again
+  # (the 3rd scripted answer), so it must not retry; Cake says "Done." instead of "unavailable".
+  def test_an_empty_answer_after_a_command_says_done_and_does_not_retry
+    call = { "type" => "function_call", "call_id" => "c1", "name" => "show_help", "arguments" => '{"category":"music"}' }
+    client = FakeClient.new(answers: [{ tool_calls: [call] }, "", { tool_calls: [call] }, ""])
+    history = []
+    event = FakeAiEvent.new("show me the music commands")
+    answer_ai_channel_message(event, client, history)
+    assert_equal 1, event.channel.posted.length # the help page was posted once
+    assert_equal 2, client.requests.length # one try: the tool call, then the empty answer
+    assert_equal [COMMAND_DONE_REPLY], event.sent.map { |sent| sent[:text] }
+    assert_equal "#{COMMAND_DONE_REPLY}\n[showed help: Music]", history.last[:content]
+    assert_equal [true, true], history.map { |message| message[:command] }
   end
 end

@@ -10,6 +10,7 @@ require_relative './tool_list'
 require_relative './memory_index'
 require_relative './channel_summary'
 require_relative './memory_questions'
+require_relative './emoji_search' # emoji parts of the prompt
 
 # The bot's personality: who it is and how it talks. Edit prompts/personality.txt to change it, no code needed.
 # {bot_name} is replaced with the bot's name in the server. Changes apply on the next message, no restart.
@@ -40,20 +41,27 @@ end
 # Final system prompt = personality (with the bot's name filled in) + capabilities + technical rules + memory rules + today's date,
 # then the server's memory index, this channel's summary and any open memory question (when there are any).
 # The parts that change least come first, so OpenAI can cache the start of the prompt.
-def build_system_prompt(bot_name, memory_index: "", channel_summary: "", recent_activity: "", open_question: "")
+def build_system_prompt(bot_name, memory_index: "", channel_summary: "", recent_activity: "", open_question: "",
+                        emoji_section: "", emoji_suggestions: "")
   personality = load_personality.gsub("{bot_name}", bot_name)
-  prompt = "#{personality}\n\n#{CAPABILITIES}\n\n#{CHAT_RULES}\n\n#{MEMORY_RULES}\n\nToday's date is #{Date.today.strftime('%A, %d %B %Y')}."
+  prompt = "#{personality}\n\n#{CAPABILITIES}\n\n#{CHAT_RULES}\n\n#{MEMORY_RULES}#{emoji_section_part(emoji_section)}\n\nToday's date is #{Date.today.strftime('%A, %d %B %Y')}."
   prompt += "\n\n## Long-term memory (index of saved notes)\n#{memory_index}" unless memory_index.empty?
   prompt += "\n\n## Summary of earlier conversation in this channel\n#{channel_summary}" unless channel_summary.empty?
   prompt += "\n\n## Recently, in other channels (background only)\n#{recent_activity}" unless recent_activity.empty?
   prompt += "\n\n#{open_question}" unless open_question.empty?
+  prompt += "\n\n#{emoji_suggestions}" unless emoji_suggestions.empty?
   prompt
+end
+
+# The emoji section sits before the date line, so it stays inside the cached start of the prompt
+def emoji_section_part(emoji_section)
+  emoji_section.empty? ? "" : "\n\n#{emoji_section}"
 end
 
 # Memory for the prompt: the server's index (everywhere) and the channel summary (AI channels only).
 # context comes from Discord: { server_id:, channel_id:, ... }. No server (e.g. tests, DMs) = no memory.
-def load_prompt_memory(context)
-  memory = { memory_index: "", channel_summary: "" }
+def load_prompt_memory(context, history = [])
+  memory = { memory_index: "", channel_summary: "" }.merge(emoji_prompt_parts(context, history))
   server_id = context[:server_id]
   return memory if server_id.nil?
 
@@ -78,6 +86,20 @@ rescue StandardError => e
   ""
 end
 
+# The emoji parts of the prompt: favourites (stable) and suggestions for the newest message.
+# Uses the same library as find_emoji (context[:emojis]). Never raises: no emojis is fine.
+def emoji_prompt_parts(context, history)
+  library = context[:emojis]
+  return { emoji_section: "", emoji_suggestions: "" } if library.nil?
+
+  text = history.reverse.find { |message| message[:role] == "user" }&.dig(:content).to_s
+  { emoji_section: emoji_prompt_section(library),
+    emoji_suggestions: emoji_suggestion_line(context[:client], library, text, embedder: context[:emoji_embedder] || method(:embed_texts)) }
+rescue StandardError => e
+  log "😀 could not build the emoji prompt (#{e.class})"
+  { emoji_section: "", emoji_suggestions: "" }
+end
+
 # Temporary guard until size limits are designed: never put more than MEMORY_PROMPT_MAX_CHARS into the prompt
 def cap_for_prompt(text, label)
   return text if text.length <= MEMORY_PROMPT_MAX_CHARS
@@ -89,15 +111,25 @@ end
 # Returns the AI's answer, or nil if the request failed.
 # context: facts from Discord for memory and tools { server_id:, channel_id:, requester_id:, requester_name: }
 # If the model used the whole budget on thinking and the answer is empty, try once more without thinking.
+# No retry after a command tool ran (help, music, clear): the retry would run the same command again.
 def ask_ai(client, history, bot_name, context = {})
   context = context.merge(client: client, images: images_in_history(history), pending_images: [], image_looks: 0,
                           text_files: text_files_in_history(history), text_file_reads: 0, channel_searches: 0)
-  memory = load_prompt_memory(context)
+  context[:emojis] ||= EMOJIS
+  context[:emoji_searches] ||= 0
+  memory = load_prompt_memory(context, history)
   answer = request_answer(client, history, bot_name, OPENAI_REASONING_EFFORT, memory, context)
   return answer if answer.nil? || !answer.strip.empty? # an API error, or a real answer
+  return answer if command_ran?(context)
 
   log "↻ Retrying with reasoning '#{OPENAI_FALLBACK_REASONING_EFFORT}'"
   request_answer(client, history, bot_name, OPENAI_FALLBACK_REASONING_EFFORT, memory, context)
+end
+
+# true if a command tool added a label during this request (see command_labels.rb)
+def command_ran?(context)
+  labels = context[:command_labels]
+  labels.is_a?(Array) && !labels.empty?
 end
 
 # Get one answer from OpenAI (Responses API), letting the AI use tools on the way.

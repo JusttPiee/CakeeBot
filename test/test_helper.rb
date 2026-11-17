@@ -62,3 +62,15 @@ class FakeClient
       "output" => [{ "type" => "reasoning", "encrypted_content" => "locked-thinking" }] + tool_calls }
   end
 end
+
+# Gives the bot-wide EMOJIS (emoji_library.rb) one emoji for the block, then puts its old state back.
+# For tests of the chat handlers, which always use EMOJIS.
+def with_bot_emoji(name, id)
+  saved = %i[@emojis @notes @favourites].to_h { |var| [var, EMOJIS.instance_variable_get(var)] }
+  EMOJIS.instance_variable_set(:@emojis, { id => { name: name, animated: false } })
+  EMOJIS.instance_variable_set(:@notes, {})
+  EMOJIS.instance_variable_set(:@favourites, nil)
+  yield
+ensure
+  saved.each { |var, value| EMOJIS.instance_variable_set(var, value) }
+end

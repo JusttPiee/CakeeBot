@@ -129,6 +129,8 @@ BUILD_MEMORY_REASONING_EFFORT = saved_setting('BUILD_MEMORY_REASONING_EFFORT', '
 CLEAR_MAX_MESSAGES = saved_setting('CLEAR_MAX_MESSAGES', 100) # Discord deletes at most 100 messages in one go
 CLEAR_SCAN_MESSAGES = saved_setting('CLEAR_SCAN_MESSAGES', 500) # with a person: how far back to look for their messages
 CLEAR_REPORT_SECONDS = saved_setting('CLEAR_REPORT_SECONDS', 5) # the "Deleted N messages" note disappears after this long
+CLEAR_CONFIRM_SECONDS = 60 # the Delete / Cancel buttons from the AI stop working after this long
+COMMAND_LABEL_MAX_CHARS = 80 # labels like [music: Skipped.] added to the AI reply are cut to this length
 
 # Voice music (music/ folder and music_*.rb files)
 MUSIC_ENABLED = saved_setting('MUSIC_ENABLED', 'on') # 'on' or 'off': off makes every music command say music is turned off
@@ -152,3 +154,13 @@ RECENT_ACTIVITY_QUESTION_CHARS = 200 # the question is cut here
 
 # A reply shows who it answers and this much of that message's text
 REPLY_QUOTE_MAX_CHARS = 100
+
+# Custom emojis (emoji_library.rb): the bot's own emojis, so Cake can use them as :name: in its replies
+EMOJI_FAVOURITES = saved_setting('EMOJI_FAVOURITES', 10) # the most used emojis listed in every prompt
+EMOJI_SUGGESTIONS = saved_setting('EMOJI_SUGGESTIONS', 5) # emojis that fit the message, suggested in the prompt
+EMOJI_REFRESH_MINUTES = 30 # how often the emoji list is fetched from Discord again
+EMOJI_RETRY_SECONDS = 60 # while there are no emojis yet (the first fetch failed), try again this soon
+EMOJI_FAVOURITES_REFRESH_SECONDS = 3600 # the favourites list is rebuilt at most this often
+EMOJI_SEARCHES_PER_REPLY = 2 # emoji searches the AI may make in one reply
+EMOJI_SEARCH_RESULTS = 8 # emojis one search gives back
+THINKING_EMOJI = setting('THINKING_EMOJI', default: 'thinking') # name of the emoji shown in "Thinking..."

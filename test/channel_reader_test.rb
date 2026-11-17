@@ -78,6 +78,14 @@ class ChannelReaderTest < Minitest::Test
     assert_equal({ role: "assistant", content: "hello Piee" }, history.last.slice(:role, :content))
   end
 
+  # Discord gives Cake's old replies back with <:name:id>; the AI writes and reads the short :name: form
+  def test_bot_emojis_are_read_back_as_names
+    channel = FakeChannel.new([say(BOT, "yay <:happy:42> <a:dance:7>"), say(PIEE, "look <:happy:42>")])
+    history = load_channel_history(channel, BOT_ID)
+    assert_equal "yay :happy: :dance:", history.first[:content]
+    assert_equal "Piee (123): look <:happy:42>", history.last[:content] # other people's text stays as written
+  end
+
   def test_other_people_get_the_name_and_id_prefix
     channel = FakeChannel.new([say(PIEE, "valorant?")])
     first = load_channel_history(channel, BOT_ID).first

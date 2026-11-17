@@ -3,6 +3,7 @@ require "faraday"
 require "tmpdir"
 require_relative "../config"
 require_relative "../ai_chat"
+require_relative "../emoji_library"
 
 # A tool call that is safe in tests: localhost is blocked, so no real web request is made
 def blocked_page_call(call_id = "call_1")
@@ -341,5 +342,36 @@ class AiChatTest < Minitest::Test
     refute_includes memory[:recent_activity], "same channel" # already in this channel's own history
   ensure
     RECENT_ACTIVITY.clear
+  end
+  # --- custom emojis in the prompt ---
+
+  def emoji_context
+    library = EmojiLibrary.new(notes_path: File.join(MEMORY_DIR, "ai_chat_emoji_notes.json"))
+    library.refresh(-> { [{ id: 1, name: "sad", animated: false }] })
+    library.set_description(1, "crying")
+    embedder = ->(_client, texts) { texts.map { [1.0, 0.0] } }
+    { emojis: library, emoji_embedder: embedder }
+  end
+
+  def test_ask_ai_puts_emoji_favourites_and_suggestions_in_the_prompt
+    client = FakeClient.new
+    ask_ai(client, history, "Mochi", emoji_context)
+    instructions = client.requests.first[:instructions]
+    assert_includes instructions, "## Your custom emojis"
+    assert instructions.index("## Your custom emojis") < instructions.index("Today's date")
+    assert instructions.end_with?("Suggested emojis for this message: :sad: — crying")
+  end
+
+  def test_ask_ai_without_emojis_adds_nothing
+    client = FakeClient.new
+    ask_ai(client, history, "Mochi", { emojis: EmojiLibrary.new(notes_path: File.join(MEMORY_DIR, "none.json")) })
+    refute_includes client.requests.first[:instructions], "## Your custom emojis"
+  end
+
+  def test_failing_suggestions_do_not_break_ask_ai
+    client = FakeClient.new
+    context = emoji_context.merge(emoji_embedder: ->(*) { raise "down" })
+    assert_equal "Hi Bach!", ask_ai(client, history, "Mochi", context)
+    refute_includes client.requests.first[:instructions], "Suggested emojis"
   end
 end

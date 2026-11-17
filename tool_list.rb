@@ -17,6 +17,10 @@ require_relative './tools/update_my_personality'
 require_relative './tools/forget_my_personality'
 require_relative './tools/search_memory'
 require_relative './tools/search_channel_history'
+require_relative './tools/show_help'
+require_relative './tools/music'
+require_relative './tools/manage_messages'
+require_relative './tools/find_emoji'
 
 # name => { definition: what the AI sees, run: the Ruby method that does the work }
 def available_tools
@@ -36,6 +40,10 @@ def available_tools
   tools["merge_memories"] = { definition: MERGE_MEMORIES_DEFINITION, run: method(:run_merge_memories) }
   tools["update_my_personality"] = { definition: UPDATE_MY_PERSONALITY_DEFINITION, run: method(:run_update_my_personality) }
   tools["forget_my_personality"] = { definition: FORGET_MY_PERSONALITY_DEFINITION, run: method(:run_forget_my_personality) }
+  tools["show_help"] = { definition: SHOW_HELP_DEFINITION, run: method(:run_show_help) }
+  tools["music"] = { definition: MUSIC_DEFINITION, run: method(:run_music) }
+  tools["manage_messages"] = { definition: MANAGE_MESSAGES_DEFINITION, run: method(:run_manage_messages) }
+  tools["find_emoji"] = { definition: FIND_EMOJI_DEFINITION, run: method(:run_find_emoji) }
   tools
 end
 

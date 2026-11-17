@@ -67,15 +67,24 @@ end
 
 # --- deleting ---
 
-# Discord's bulk delete needs 2 to 100 messages, so a single message is deleted on its own
+# Discord's bulk delete needs 2 to 100 messages. Longer lists are cut into pieces of at most 100,
+# and a single message is deleted on its own.
 def delete_message_ids(channel, ids)
-  return if ids.empty?
-
-  if ids.length == 1
-    channel.delete_message(ids.first)
-  else
-    channel.delete_messages(ids)
+  delete_chunks(ids).each do |chunk|
+    if chunk.length == 1
+      channel.delete_message(chunk.first)
+    else
+      channel.delete_messages(chunk)
+    end
   end
+end
+
+# Pieces of at most 100 ids. If the last piece would be a single id, it takes one from the piece before
+# (a piece of 99 and a piece of 2), so the only single piece is when there is just one id in total.
+def delete_chunks(ids)
+  chunks = ids.each_slice(DISCORD_PAGE_SIZE).to_a
+  chunks.last.unshift(chunks[-2].pop) if chunks.length > 1 && chunks.last.length == 1
+  chunks
 end
 
 def clear_report_text(deleted, too_old, target)
@@ -111,11 +120,20 @@ def clear_problem(event)
 end
 
 def run_clear(event, target, reader)
-  raw_messages = fetch_older_messages(reader.new(event.channel, event.bot), clear_read_amount(target))
-  ids, too_old = split_by_age(messages_to_clear(raw_messages, event.message.id, target))
-  delete_message_ids(event.channel, ids + [event.message.id]) # the command goes too
-  log_clear(event, target, ids.length, too_old)
-  send_temporary_note(event.channel, clear_report_text(ids.length, too_old, target), CLEAR_REPORT_SECONDS)
+  deleted, too_old = clear_messages_before(event.channel, event.bot, event.message.id, target, reader, [event.message.id]) # the command goes too
+  log_clear(event, target, deleted, too_old)
+  send_temporary_note(event.channel, clear_report_text(deleted, too_old, target), CLEAR_REPORT_SECONDS)
+end
+
+# Reads the messages older than before_id, picks the ones to delete and deletes them.
+# Used by !clear and by the AI's confirm buttons (ai_clear_confirm.rb).
+# extra_ids (e.g. the command itself) are deleted in the same call and are not counted.
+# Returns [how many were deleted, how many were too old to delete].
+def clear_messages_before(channel, bot, before_id, target, reader = ReadingChannel, extra_ids = [])
+  raw_messages = fetch_older_messages(reader.new(channel, bot), clear_read_amount(target), before_id)
+  ids, too_old = split_by_age(messages_to_clear(raw_messages, nil, target))
+  delete_message_ids(channel, ids + extra_ids)
+  [ids.length, too_old]
 end
 
 def log_clear(event, target, deleted, too_old)

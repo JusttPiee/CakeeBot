@@ -15,6 +15,7 @@ require_relative './chat_history'
 require_relative './ai_chat'
 require_relative './message_logger'
 require_relative './message_splitter'
+require_relative './thinking_reply' # emoji_chunks
 require_relative './discord_history'
 require_relative './mention_chat' # name_bot_mentions
 require_relative './temporary_note'
@@ -70,10 +71,11 @@ def silent_history(event, question, reader)
   history
 end
 
-# Like mention_context: the server's memory and tools, no channel summary
+# Like mention_context: the server's memory and tools, no channel summary.
+# silent: true makes the command tools (help, music, clear) refuse, because they would show in the channel.
 def silent_context(event, reader)
   { server_id: event.server.id, channel_id: nil, channel: reader.new(event.channel, event.bot),
-    requester_id: event.author.id, requester_name: event.author.display_name }
+    requester_id: event.author.id, requester_name: event.author.display_name, silent: true }
 end
 
 # "Cake is typing..." in their DMs while the AI thinks. Not important enough to fail over.
@@ -84,7 +86,7 @@ rescue StandardError
 end
 
 def send_silent_answer(event, answer)
-  split_message(answer).each { |chunk| event.author.pm(chunk) }
+  emoji_chunks(answer).each { |chunk| event.author.pm(chunk) } # emojis work in DMs too (no Thinking line here)
   log_bot_reply(event, "(DM) #{answer}")
 rescue StandardError => e
   log "⚠️ !silent could not DM #{event.author.display_name} (#{e.class})"

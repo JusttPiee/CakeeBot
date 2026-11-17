@@ -38,6 +38,39 @@ class CompactionTest < Minitest::Test
     { user_id: "123", name: "Bach", personality: personality, description: "chatty" }
   end
 
+  # --- command turns (AI ran manage_messages / show_help / music) ---
+
+  # chat(23) where the first two turns (user + assistant) are command turns
+  def chat_with_command_turns
+    history = chat(23)
+    history.first(4).each { |message| message[:command] = true }
+    history
+  end
+
+  def test_compaction_skips_command_turns
+    history = chat_with_command_turns
+    client = FakeClient.new(answers: [result])
+    assert compact_history(client, history, 1, 555, "Mochi")
+    sent = client.requests.first[:input].first[:content]
+    refute_includes sent, "message 0"
+    refute_includes sent, "reply 1\n"
+    assert_includes sent, "message 2"
+    assert history.length <= COMPACT_TARGET_MESSAGES # command messages were still dropped
+    refute history.any? { |message| message[:command] }
+  end
+
+  def test_compaction_with_only_command_turns_makes_no_request
+    history = chat(23)
+    old, _kept = split_for_compaction(history)
+    old.each { |message| message[:command] = true }
+    client = FakeClient.new(answers: [result])
+    assert compact_history(client, history, 1, 555, "Mochi")
+    assert_empty client.requests
+    assert_equal 46 - old.length, history.length
+    assert_includes LOGS.last, "Dropped #{old.length} old command messages"
+    assert_empty read_channel_summary(1, 555)[:text] # nothing was saved
+  end
+
   def test_small_history_needs_no_compaction
     refute needs_compaction?(chat(5))
   end

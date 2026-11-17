@@ -47,6 +47,7 @@ require_relative './terminal_commands' # Commands typed in the terminal, like /r
 require_relative './build_memory' # !buildmemory: personality notes from old messages
 require_relative './forget_me' # !forgetme: someone removes what Cake remembers about them
 require_relative './clear_messages' # !clear: admins delete recent messages
+require_relative './ai_clear_confirm' # the Yes / No buttons when the AI is asked to delete messages
 require_relative './silent_chat' # !silent: ask Cake privately, the answer goes to DMs
 require_relative './help_command' # !help: the command list, one category per page
 require_relative './web_api/web_server' # The web UI at http://localhost:4567 (see web_api/)
@@ -504,32 +505,8 @@ bot.command(:clear) do |event, *args| # !clear 50, or !clear @user 50 (admins on
   nil
 end
 
-bot.message do |event| # Message event to handle AI interactions
-  next if event.message.content.start_with?('!') #skip if prefix detected
-  next unless ai_channel?(ai_config_path, event.channel.id) # Only answer every message in AI channels
-
-  with_channel_lock(event.channel.id) do # Handle this channel's messages one at a time
-    answer_ai_channel_message(event, client, bot_state[:histories][event.channel.id]) # see ai_channel_chat.rb
-  end
-end
-
-bot.message do |event| # Another bot tagged Cake: Cake doesn't answer, but remembers it for a while (recent_activity_events.rb)
-  note_unanswered_tag(event, ai_config_path)
-end
-
-bot.message do |event| # Answer when @mentioned (or replied to) in any other channel
-  next if event.server.nil? # DMs: not handled yet
-  next if event.message.content.start_with?('!') # commands are handled by bot.command
-  next if event.author.id == event.bot.profile.id # never answer ourselves
-  next unless mentions_bot?(event.message, event.bot.profile.id)
-  next if ai_channel?(ai_config_path, event.channel.id) # AI channels already answer everything
-
-  answer_mention(event, client)
-end
-
-word_chain_game(bot) #preload the word chain game function
-
 # Music. The handlers return nil, because discordrb would post any other return value in the chat.
+# Made here, above the AI chat handlers, so their blocks can see `music` (for the AI's music tool).
 music = nil # the bridge's events go to the controller, which is made right after the bridge
 music_bridge = MusicBridge.new(on_event: ->(event) { music.handle_event(event) })
 music = MusicController.new(bridge: music_bridge, poster: MusicPanelPoster.new)
@@ -552,6 +529,37 @@ bot.voice_state_update do |event| # Cake leaves when nobody else is in its voice
   nil
 end
 
+# The AI asked to delete messages (manage_messages tool): the admin's Yes / No buttons (ai_clear_confirm.rb)
+bot.button(custom_id: /\Aaiclear:/) do |event|
+  clear_confirm_pressed(event)
+  nil
+end
+
+bot.message do |event| # Message event to handle AI interactions
+  next if event.message.content.start_with?('!') #skip if prefix detected
+  next unless ai_channel?(ai_config_path, event.channel.id) # Only answer every message in AI channels
+
+  with_channel_lock(event.channel.id) do # Handle this channel's messages one at a time
+    answer_ai_channel_message(event, client, bot_state[:histories][event.channel.id], music) # see ai_channel_chat.rb
+  end
+end
+
+bot.message do |event| # Another bot tagged Cake: Cake doesn't answer, but remembers it for a while (recent_activity_events.rb)
+  note_unanswered_tag(event, ai_config_path)
+end
+
+bot.message do |event| # Answer when @mentioned (or replied to) in any other channel
+  next if event.server.nil? # DMs: not handled yet
+  next if event.message.content.start_with?('!') # commands are handled by bot.command
+  next if event.author.id == event.bot.profile.id # never answer ourselves
+  next unless mentions_bot?(event.message, event.bot.profile.id)
+  next if ai_channel?(ai_config_path, event.channel.id) # AI channels already answer everything
+
+  answer_mention(event, client, music)
+end
+
+word_chain_game(bot) #preload the word chain game function
+
 ensure_personality_file # so it exists to edit from the first run, before anyone chats
 
 MUSIC_START_STATE = { started: false }
@@ -573,12 +581,24 @@ rescue StandardError => e
   log "🎵 Music could not start (#{e.class}): #{e.message}"
 end
 
+EMOJI_REFRESH_STATE = { started: false }
+
+# Starts reading the bot's own emojis (emoji_library.rb), now and every EMOJI_REFRESH_MINUTES.
+# Like start_music, only the first "ready" starts it: the loop keeps running across reconnects.
+def start_emoji_refresh_once(bot, client)
+  return if EMOJI_REFRESH_STATE[:started]
+
+  EMOJI_REFRESH_STATE[:started] = true
+  start_emoji_refresh(bot, client)
+end
+
 # Only announce we're alive once Discord has actually accepted the token and connected
 bot.ready do |event|
   log "🤖 Cake is alive! Logged in as #{event.bot.profile.distinct} in #{event.bot.servers.size} server(s)"
   restore_ai_memory(event.bot, bot_state[:histories], load_ai_channels(ai_config_path)) # remember the AI chats after a restart
   start_memory_tidy_once(client, event.bot, bot_state[:histories]) # here, because sending memory questions needs the connection
   start_music(music_bridge) # here too: Node logs in with the same token
+  start_emoji_refresh_once(event.bot, client) # the emoji list needs the connection too
   start_web_ui(event.bot, client, bot_state[:histories], ai_config_path, ENV_FILE) # here, because it lists the bot's servers
 end
 

@@ -20,7 +20,9 @@ CONFIG_GROUPS = [
     choice_field("OPENAI_REASONING_EFFORT", REASONING_LEVELS),
     choice_field("OPENAI_FALLBACK_REASONING_EFFORT", REASONING_LEVELS),
     integer_field("OPENAI_MAX_OUTPUT_TOKENS", 500, 32_000),
-    integer_field("MAX_TOOL_ROUNDS", 1, 20)
+    integer_field("MAX_TOOL_ROUNDS", 1, 20),
+    integer_field("EMOJI_FAVOURITES", 0, 30), # 0 = no favourites listed in the prompt
+    integer_field("EMOJI_SUGGESTIONS", 0, 15) # 0 = no suggestions per message
   ] },
   { id: "history", fields: [
     integer_field("MAX_HISTORY_MESSAGES", 10, 200),

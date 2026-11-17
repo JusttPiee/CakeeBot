@@ -70,13 +70,18 @@ end
 def messages_by_person(messages)
   people = {}
   messages.sort_by { |message| message[:time] }.each do |message|
-    next if message[:bot]
+    next if message[:bot] || typed_command?(message)
 
     person = people[message[:author_id]] ||= { name: "", messages: [] }
     person[:name] = message[:author_name]
     person[:messages] << message
   end
   people
+end
+
+# A typed bot command like "!play x" says nothing about the person
+def typed_command?(message)
+  message[:text].to_s.lstrip.start_with?("!")
 end
 
 # { chosen: [[user_id, person], ...] most active first, too_few:, turned_off:, over_limit: }

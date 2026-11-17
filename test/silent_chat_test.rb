@@ -142,6 +142,13 @@ class SilentChatTest < Minitest::Test
     assert(LOGS.any? { |line| line.include?("could not delete") })
   end
 
+  # Emojis work in DMs too (only the Thinking line is left out of !silent)
+  def test_emojis_are_converted_in_dms
+    event = Event.new("!silent hi")
+    with_bot_emoji("happy", 42) { run_silent(event, FakeClient.new(answers: ["yay :happy:"])) }
+    assert_equal ["yay <:happy:42>"], event.author.dms
+  end
+
   def test_long_answers_are_split_into_several_dms
     event = Event.new("!silent tell me a story")
     run_silent(event, FakeClient.new(answers: ["word " * 1000]))
@@ -188,5 +195,12 @@ class SilentChatTest < Minitest::Test
 
   def test_the_ai_knows_about_the_command
     assert_includes CAPABILITIES, "!silent"
+  end
+
+  # The command tools (help, music, clear) refuse in !silent: they would show in the channel
+  def test_silent_context_marks_tools_off
+    context = silent_context(Event.new("!silent hi"), ReadAsIs)
+    assert_equal true, context[:silent]
+    refute context.key?(:command_labels)
   end
 end

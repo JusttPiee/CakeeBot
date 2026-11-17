@@ -51,6 +51,16 @@ If something is missing, the terminal says so when the bot starts (`🎵 Music o
 
 **Mentions:** in any channel, `@Cake` or a reply to one of Cake's messages gets an AI answer. Each time, Cake reads that channel's last 45 messages as context.
 
+**Asking Cake in plain words:** in an AI channel or with a mention you can just say what you want instead of typing a command, e.g. "what can you do?", "play lạc trôi", "skip", "turn it down", "delete the last 20 messages". Cake shows the `!help` page, controls the music, or clears messages for you, with the same rules as the typed commands: music needs you in Cake's voice channel, clearing is admins only. Cake never deletes anything straight away: it posts a confirm message with **Delete** / **Cancel** buttons that only you can press, and the buttons expire after 60 seconds. These exchanges stay out of Cake's long-term memory, so they don't fill up channel summaries or personality notes. They don't work in `!silent`.
+
+**Thinking line and custom emojis:** while the AI works, Cake replies "🤔 Thinking..." and then edits that same message into the answer, so nothing is deleted. Cake can also use your own custom emojis in its replies, picking ones that fit the mood. To set this up:
+
+1. Open the [Discord Developer Portal](https://discord.com/developers/applications), choose your bot's application and go to **Emojis**. Upload the emojis you want Cake to use (PNG, or GIF for animated ones). These are the *bot's own* emojis: they work in every server and in DMs without extra permissions.
+2. Give them names that say what they mean (`happy_cat`, `angry`, `crying`). Cake also looks at each new emoji once and writes a short description of the feeling it shows, so names like `furina` still work.
+3. Optional: upload an emoji named `thinking` (or set `THINKING_EMOJI` in `.env` to another emoji name) to replace the 🤔 in the Thinking line.
+
+Cake reads the emoji list when it starts and again every 30 minutes, so new uploads work without a restart. **If your bot has no emojis, nothing breaks:** Cake simply answers without custom emojis, and the Thinking line uses 🤔. On the web UI's Config page, `EMOJI_FAVOURITES` (default 10) sets how many of Cake's most-used emojis are always listed for the AI, and `EMOJI_SUGGESTIONS` (default 5) sets how many fitting emojis are picked for each message. Setting both to 0 stops listing emojis in the prompt, but Cake can still look them up with its `find_emoji` tool; to fully turn custom emojis off, remove them from the Developer Portal.
+
 **Checking old messages:** when someone says what another person said earlier, Cake can read back through the last 500 messages of the current channel (`search_channel_history`) and quote the real message with a link. For older things it jumps straight to a date, even years back ("what did Pie say in March 2022?"), or to the very first messages of the channel. It never reads other channels this way, and it saves nothing.
 
 **`!buildmemory`:** reads the last 2,000 messages of every text channel the bot can see, and asks the AI for a personality note about each of the 50 most active people (one request per person, using only that person's own messages). People with fewer than 5 messages, and people who used `!forgetme` or asked Cake to remove their personality note, are skipped. It runs in the background and posts a report when it's done.
@@ -157,6 +167,7 @@ You can also set them as normal environment variables, which is handy on servers
 | `OPENAI_TEMPERATURE` | No | Reply randomness (e.g. `0.7`). Leave empty if your model only supports the default |
 | `DISCORD_INVITE_URL` | No | A custom link for `!invite`. If empty, the bot builds one automatically |
 | `TAVILY_API_KEY` | No | Lets the AI search the web ([tavily.com](https://tavily.com), free plan ~1,000 searches/month). If empty, web search is off |
+| `THINKING_EMOJI` | No | Name of one of the bot's own emojis to show in the "Thinking..." line. Default: `thinking`; if the bot has no emoji with that name, 🤔 is used |
 
 To change a key, edit it in `.env`, or clear its value (leave `KEY=` empty) and the bot will ask again on the next run.
 
@@ -169,6 +180,7 @@ To change a key, edit it in `.env`, or clear its value (leave `KEY=` empty) and 
 | `.env` | Your secret keys. **Never share or commit this file**; it's already in `.gitignore` |
 | `badwords.txt` | The bad words list, one word per line. You can edit it by hand or with `!badword` |
 | `ai_config.txt` | Created automatically. Remembers which channel has AI chat on |
+| `memory/emoji_notes.json` | Created automatically. A short description and a use count for each of the bot's emojis. Delete it to have the descriptions made again |
 | `prompts/personality.txt` | Created automatically from `personality.default.txt` and not tracked by git. The AI's identity and tone. Edit freely; `{bot_name}` becomes your bot's name. Changes apply on the next message |
 | `prompts/capabilities.txt` | The commands and abilities the AI knows about. Update it when you add a command. Restart the bot to apply changes |
 | `prompts/chat_rules.txt` | Technical rules the code depends on, like the message format. Restart the bot to apply changes |

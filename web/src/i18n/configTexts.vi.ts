@@ -34,6 +34,10 @@ export const configVi: Record<keyof typeof configEn, string> = {
   "config.MAX_TOOL_ROUNDS.label": "Số vòng dùng tool mỗi câu trả lời",
   "config.MAX_TOOL_ROUNDS.help":
     "Một vòng = AI xin dùng tool, Cake chạy rồi gửi kết quả lại. Hết số vòng này thì AI phải trả lời.",
+  "config.EMOJI_FAVOURITES.label": "Số emoji yêu thích trong prompt",
+  "config.EMOJI_FAVOURITES.help": "Những emoji riêng Cake hay dùng nhất, luôn có sẵn trong mỗi prompt. 0 = không liệt kê.",
+  "config.EMOJI_SUGGESTIONS.label": "Số emoji gợi ý mỗi tin nhắn",
+  "config.EMOJI_SUGGESTIONS.help": "Những emoji riêng hợp với tin nhắn mới nhất, chọn theo ý nghĩa rồi thêm vào prompt. 0 = không gợi ý.",
 
   // --- Bộ nhớ chat và compaction ---
   "config.MAX_HISTORY_MESSAGES.label": "Số tin nhớ mỗi kênh",

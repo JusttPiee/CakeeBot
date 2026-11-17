@@ -5,12 +5,15 @@ require_relative "../discord_history"
 # Messages are written as small structs in tests, and turned into Discord's raw JSON (hashes) when read.
 # nickname: the server nickname discordrb would know for this person (nil = not known)
 HistoryAuthor = Struct.new(:id, :display_name, :bot, :nickname)
-HistoryMessage = Struct.new(:id, :author, :content, :creation_time) do
+# reply_to: the id of the message this one replies to (nil = not a reply)
+HistoryMessage = Struct.new(:id, :author, :content, :creation_time, :reply_to) do
   # What Discord's API sends for this message
   def to_raw
-    { "id" => id.to_s, "content" => content, "timestamp" => creation_time.iso8601(3),
+    raw = { "id" => id.to_s, "content" => content, "timestamp" => creation_time.iso8601(3),
       "author" => { "id" => author.id.to_s, "username" => author.display_name.downcase,
                     "global_name" => author.display_name, "bot" => author.bot ? true : false } }
+    raw["message_reference"] = { "message_id" => reply_to.to_s } if reply_to
+    raw
   end
 end
 

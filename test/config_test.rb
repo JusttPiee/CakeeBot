@@ -35,6 +35,12 @@ class ConfigTest < Minitest::Test
     assert_equal 60, MUSIC_COMMAND_TIMEOUT_SECONDS
   end
 
+  def test_emoji_defaults
+    assert_equal 10, EMOJI_FAVOURITES
+    assert_equal 5, EMOJI_SUGGESTIONS
+    assert_equal "thinking", THINKING_EMOJI
+  end
+
   def test_agreed_defaults
     assert_equal "low", OPENAI_REASONING_EFFORT
     assert_equal "none", OPENAI_FALLBACK_REASONING_EFFORT

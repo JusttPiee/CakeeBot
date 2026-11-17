@@ -1,4 +1,5 @@
 require_relative "test_helper"
+require "faraday"
 require_relative "../config"
 require_relative "../mention_chat"
 
@@ -49,10 +50,12 @@ class MentionChatTest < Minitest::Test
   # No channel_id (so no summary), but the channel itself is there for search_channel_history
   def test_mention_context_has_no_channel_id_so_no_summary
     channel = Struct.new(:id, :name).new(555, "general")
-    bot = Struct.new(:token).new("fake-token")
-    event = Struct.new(:server, :author, :channel, :bot).new(Struct.new(:id).new(1), Struct.new(:id, :display_name).new(123, "Bach"), channel, bot)
+    bot = Struct.new(:token, :profile).new("fake-token", Struct.new(:avatar_url).new(nil))
+    event = Struct.new(:server, :author, :channel, :bot, :message).new(Struct.new(:id).new(1), Struct.new(:id, :display_name).new(123, "Bach"), channel, bot, Struct.new(:id).new(500))
     context = mention_context(event)
-    assert_equal({ server_id: 1, channel_id: nil, requester_id: 123, requester_name: "Bach" }, context.except(:channel))
+    assert_equal({ server_id: 1, channel_id: nil, requester_id: 123, requester_name: "Bach" },
+                 context.slice(:server_id, :channel_id, :requester_id, :requester_name))
+    assert_equal 500, context[:request_message_id] # plus the command tools' facts (command_context.rb)
     assert_instance_of ReadingChannel, context[:channel] # reads raw messages, see discord_history.rb
     assert_equal 555, context[:channel].id
   end
@@ -119,5 +122,118 @@ class MentionChatTest < Minitest::Test
       note_unanswered_tag(tag_event("talking about cake"), @config)
       assert_empty all_recent_entries(1)
     end
+  end
+
+  # --- a command turn when @mentioned (the AI runs show_help) ---
+
+  # Only what answer_mention uses. history is what the fake reader gives back.
+  class AnswerEvent
+    Author = Struct.new(:id, :display_name)
+    Channel = Struct.new(:id, :name) do
+      def start_typing = nil
+      def send_message(*args) = (posted << args) && nil
+      def posted = (@posted ||= [])
+      def history(_amount) = []
+    end
+    Bot = Struct.new(:profile, :token)
+    Profile = Struct.new(:id, :avatar_url)
+
+    attr_reader :sent, :author, :server, :channel
+
+    def initialize(text)
+      @text = text
+      @sent = []
+      @author = Author.new(123, "Bach")
+      @server = Struct.new(:id, :bot, :name).new(1, Struct.new(:display_name).new("Cake"), "My Server")
+      @channel = Channel.new(555, "general")
+    end
+
+    def bot = Bot.new(Profile.new(BOT_ID, nil), "fake-token")
+    def message = self
+    def id = 500
+    def content = @text
+    def attachments = []
+    def reply? = false
+
+    # edits: every text a sent message was edited into, in order
+    def edits = (@edits ||= [])
+
+    def reply!(text, mention_user:)
+      @sent << text
+      SentMessage.new(@sent.length, self)
+    end
+
+    # Editing a sent message changes what `sent` shows, so `sent` is what the channel shows in the end
+    def edited(id, text)
+      edits << text
+      @sent[id - 1] = text
+    end
+
+    # A message Cake sent. edit works like discordrb's Message#edit.
+    SentMessage = Struct.new(:id, :event) do
+      def edit(text) = event.edited(id, text) && self
+    end
+  end
+
+  def test_reply_goes_into_the_thinking_message
+    event = AnswerEvent.new("<@999> hi")
+    answer_mention(event, FakeClient.new(answers: ["Hi!"]), nil, ReadAsIs)
+    assert_equal ["Hi!"], event.edits
+    assert_equal ["Hi!"], event.sent # the Thinking line became the answer
+  end
+
+  def test_a_crash_turns_thinking_into_unavailable
+    event = AnswerEvent.new("<@999> hi")
+    assert_raises(RuntimeError) do
+      answer_mention(event, FakeClient.new(error: RuntimeError.new("odd response")), nil, ReadAsIs)
+    end
+    assert_equal [AI_UNAVAILABLE_MESSAGE], event.edits
+  end
+
+  def test_unavailable_answer_is_edited_into_thinking
+    event = AnswerEvent.new("<@999> hi")
+    answer_mention(event, FakeClient.new(error: Faraday::ConnectionFailed.new("x")), nil, ReadAsIs)
+    assert_equal 1, event.edits.length
+    assert_includes event.sent.first, "unavailable"
+  end
+
+  # Reads the fake channel as it is (no Discord)
+  module ReadAsIs
+    def self.new(channel, _bot) = channel
+  end
+
+  def test_mention_command_turn_skips_recent_activity
+    RECENT_ACTIVITY.clear
+    call = { "type" => "function_call", "call_id" => "c1", "name" => "show_help", "arguments" => '{"category":"music"}' }
+    event = AnswerEvent.new("<@999> music commands?")
+    answer_mention(event, FakeClient.new(answers: [{ tool_calls: [call] }, "Here you go!"]), nil, ReadAsIs)
+    assert_equal ["Here you go!"], event.sent
+    assert_equal 1, event.channel.posted.length
+    assert_empty all_recent_entries(1)
+  ensure
+    RECENT_ACTIVITY.clear
+  end
+
+  def test_a_normal_mention_is_recorded
+    RECENT_ACTIVITY.clear
+    event = AnswerEvent.new("<@999> hi")
+    answer_mention(event, FakeClient.new(answers: ["Hi!"]), nil, ReadAsIs)
+    assert_equal 1, all_recent_entries(1).length
+  ensure
+    RECENT_ACTIVITY.clear
+  end
+
+  def test_mention_empty_answer_after_a_command_says_done
+    RECENT_ACTIVITY.clear
+    call = { "type" => "function_call", "call_id" => "c1", "name" => "show_help", "arguments" => '{"category":"music"}' }
+    client = FakeClient.new(answers: [{ tool_calls: [call] }, "", { tool_calls: [call] }, ""])
+    event = AnswerEvent.new("<@999> music commands?")
+    answer_mention(event, client, nil, ReadAsIs)
+    assert_equal [COMMAND_DONE_REPLY], event.sent
+    assert_equal 1, event.channel.posted.length
+    assert_equal 2, client.requests.length
+    assert_empty all_recent_entries(1)
+  ensure
+    RECENT_ACTIVITY.clear
   end
 end
