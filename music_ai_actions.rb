@@ -5,9 +5,12 @@
 require_relative './config'
 require_relative './music_commands'
 
-MUSIC_AI_ACTIONS = %w[play skip skip_playlist pause resume volume_up volume_down set_volume queue clear_queue stop].freeze
+MUSIC_AI_ACTIONS = %w[play skip skip_playlist pause resume volume_up volume_down set_volume queue clear_queue shuffle
+                      loop_off loop_song loop_queue stop].freeze
 
 MUSIC_AI_NOTHING_PLAYING = "Nothing is playing."
+MUSIC_AI_LOOP_TEXTS = { off: "Loop is now off.", song: "Now looping this song.",
+                        queue: "Now looping the whole queue." }.freeze
 MUSIC_AI_PLAY_USAGE = "Refused: say what to play (a link or a song name)."
 MUSIC_AI_VOLUME_USAGE = "Refused: give a volume from 0 to 100."
 
@@ -79,7 +82,15 @@ def music_ai_run(controller, guild_id, action, level)
   when "pause", "resume" then music_ai_pause(controller, guild_id, action)
   when "volume_up", "volume_down", "set_volume" then music_ai_volume(controller, guild_id, action, level)
   when "queue" then music_queue_message(*controller.queue_snapshot(guild_id))
+  when "shuffle" then music_ai_shuffle_text(controller.shuffle(guild_id))
+  when "loop_off", "loop_song", "loop_queue" then music_ai_loop(controller, guild_id, action)
   end
+end
+
+# loop_off, loop_song, loop_queue: sets that mode
+def music_ai_loop(controller, guild_id, action)
+  mode = action.delete_prefix("loop_").to_sym
+  MUSIC_AI_LOOP_TEXTS.fetch(controller.set_loop(guild_id, mode), MUSIC_AI_NOTHING_PLAYING)
 end
 
 # skip, skip_playlist, clear_queue, stop
@@ -92,6 +103,11 @@ def music_ai_queue_action(controller, guild_id, action)
     controller.stop(guild_id)
     "Stopped the music."
   end
+end
+
+# "Shuffled 3 songs." or "Nothing to shuffle." (fewer than 2 songs waiting)
+def music_ai_shuffle_text(mixed)
+  mixed.zero? ? "Nothing to shuffle." : "Shuffled #{mixed} songs."
 end
 
 # pause or resume

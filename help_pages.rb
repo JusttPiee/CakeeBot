@@ -24,6 +24,8 @@ HELP_CATEGORIES = [
     ["⏩ `!skipplaylist`", "Skips the rest of the current playlist."],
     ["📜 `!queue`", "Shows the songs waiting."],
     ["🗑 `!clearqueue`", "Removes the waiting songs; the current song keeps playing."],
+    ["🔁 `!loop [off|song|queue]`", "Repeats the current song or the whole queue. `!loop` alone goes off → song → queue; the Loop button on the panel does it too."],
+    ["🔀 `!shuffle`", "Mixes the waiting songs into a random order. The 🔀 button on the panel does it too."],
     ["⏹ `!stop`", "Stops the music and leaves the voice channel (admins can use it from anywhere)."]
   ] },
   { id: "ai", emoji: "🧠", title: "AI & memory", commands: [

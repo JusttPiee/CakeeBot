@@ -46,12 +46,17 @@ def panel_description_lines(track, waiting_count)
   lines
 end
 
-# The panel for the song that is playing now (or paused). volume (0-100) adds a "🔊 50%" line.
-def music_panel_embed(track, waiting_count, paused, volume = nil)
+# The line under the song when it loops (nothing when loop is off)
+MUSIC_LOOP_LINES = { song: "🔂 Looping this song", queue: "🔁 Looping the queue" }.freeze
+
+# The panel for the song that is playing now (or paused). volume (0-100) adds a "🔊 50%" line,
+# and a loop mode other than :off adds a line saying what loops.
+def music_panel_embed(track, waiting_count, paused, volume = nil, loop_mode = :off)
   embed = Discordrb::Webhooks::Embed.new
   embed.title = paused ? "⏸ Paused" : "🎵 Now playing"
   lines = panel_description_lines(track, waiting_count)
   lines << "🔊 #{volume}%" if volume
+  lines << MUSIC_LOOP_LINES[loop_mode] if MUSIC_LOOP_LINES.key?(loop_mode)
   embed.description = lines.join("\n")
   embed.thumbnail = Discordrb::Webhooks::EmbedThumbnail.new(url: track.thumbnail) if track.thumbnail
   embed
@@ -64,22 +69,44 @@ def music_stopped_embed
   embed
 end
 
+# Button emojis. Symbols that are text by default (⏸ ⏭ 🗑 ▶) carry U+FE0F to be shown as emoji:
+# without it Discord may refuse the emoji, and with it the whole panel
+MUSIC_EMOJI_PAUSE = "⏸\u{FE0F}"
+MUSIC_EMOJI_RESUME = "▶\u{FE0F}"
+MUSIC_EMOJI_SKIP = "⏭\u{FE0F}"
+MUSIC_EMOJI_CLEAR = "🗑\u{FE0F}"
+
+# The Loop button shows the mode it is in now: [label, emoji]
+MUSIC_LOOP_BUTTONS = {
+  off: ["Loop: Off", "➡\u{FE0F}"],
+  song: ["Loop: Song", "🔂"],
+  queue: ["Loop: Queue", "🔁"]
+}.freeze
+
 # The buttons under the panel: pause/resume, skip, skip playlist, queue, clear queue,
-# and on a second row the volume down / up buttons (Discord allows 5 buttons per row)
-def music_panel_view(paused)
+# and on a second row volume down / up, loop and shuffle (Discord allows 5 buttons per row)
+def music_panel_view(paused, loop_mode = :off)
   Discordrb::Webhooks::View.new do |view|
-    view.row do |row|
-      row.button(style: :primary, label: paused ? "Resume" : "Pause", custom_id: "music:toggle")
-      row.button(style: :secondary, label: "Skip", custom_id: "music:skip")
-      row.button(style: :secondary, label: "Skip playlist", custom_id: "music:skipplaylist")
-      row.button(style: :secondary, label: "Queue", custom_id: "music:queue")
-      row.button(style: :danger, label: "Clear queue", custom_id: "music:clearqueue")
-    end
-    view.row do |row|
-      row.button(style: :secondary, label: "🔉 -#{MUSIC_VOLUME_STEP}%", custom_id: "music:voldown")
-      row.button(style: :secondary, label: "🔊 +#{MUSIC_VOLUME_STEP}%", custom_id: "music:volup")
-    end
+    view.row { |row| music_playback_buttons(row, paused) }
+    view.row { |row| music_extra_buttons(row, loop_mode) }
   end
+end
+
+def music_playback_buttons(row, paused)
+  row.button(style: :primary, label: paused ? "Resume" : "Pause", emoji: paused ? MUSIC_EMOJI_RESUME : MUSIC_EMOJI_PAUSE,
+             custom_id: "music:toggle")
+  row.button(style: :secondary, label: "Skip", emoji: MUSIC_EMOJI_SKIP, custom_id: "music:skip")
+  row.button(style: :secondary, label: "Skip playlist", emoji: "⏩", custom_id: "music:skipplaylist")
+  row.button(style: :secondary, label: "Queue", emoji: "📜", custom_id: "music:queue")
+  row.button(style: :danger, label: "Clear queue", emoji: MUSIC_EMOJI_CLEAR, custom_id: "music:clearqueue")
+end
+
+def music_extra_buttons(row, loop_mode)
+  loop_label, loop_emoji = MUSIC_LOOP_BUTTONS.fetch(loop_mode)
+  row.button(style: :secondary, label: "-#{MUSIC_VOLUME_STEP}%", emoji: "🔉", custom_id: "music:voldown")
+  row.button(style: :secondary, label: "+#{MUSIC_VOLUME_STEP}%", emoji: "🔊", custom_id: "music:volup")
+  row.button(style: :secondary, label: loop_label, emoji: loop_emoji, custom_id: "music:loop")
+  row.button(style: :secondary, label: "Shuffle", emoji: "🔀", custom_id: "music:shuffle")
 end
 
 # "title (3:45)"

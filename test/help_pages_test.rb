@@ -6,7 +6,7 @@ class HelpPagesTest < Minitest::Test
   # The commands !help listed before it was split into pages
   OLD_COMMANDS = [
     "!help", "!ping", "!badword add", "!badword remove", "!badword list", "!clear", "!wordchain", "!wordstop",
-    "!play", "!volume", "!pause", "!skip", "!skipplaylist", "!queue", "!clearqueue", "!stop", "!invite",
+    "!play", "!volume", "!pause", "!skip", "!skipplaylist", "!queue", "!clearqueue", "!shuffle", "!loop", "!stop", "!invite",
     "!neuronactivate", "!neurondeactivate", "!buildmemory", "!silent", "!forgetme"
   ].freeze
 
@@ -46,7 +46,7 @@ class HelpPagesTest < Minitest::Test
     assert_equal 5, embed.fields.length
     assert_equal "🎵 Music", embed.fields[1].name
     assert_includes embed.fields[1].value, "`!help music`"
-    assert_includes embed.fields[1].value, "8 commands"
+    assert_includes embed.fields[1].value, "10 commands"
     assert_equal "📘 Manual for Cake", embed.title
   end
 

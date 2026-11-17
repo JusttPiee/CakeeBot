@@ -7,8 +7,10 @@ MUSIC_DEFINITION = {
   type: "function",
   name: "music",
   description: "Play or control music in the voice channel of the person talking to you. Use it when they ask you to " \
-               "play a song, skip, pause, resume, change the volume, show or clear the queue, or stop. " \
+               "play a song, skip, pause, resume, change the volume, show, shuffle or clear the queue, " \
+               "loop (repeat) the song or the queue, or stop. " \
                "Use set_volume only for an exact number; for \"louder\" or \"quieter\" use volume_up or volume_down. " \
+               "loop_song repeats the current song, loop_queue repeats the whole queue, loop_off stops repeating. " \
                "Tell the person what the result says, nothing more.",
   parameters: {
     type: "object",

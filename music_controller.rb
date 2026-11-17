@@ -158,6 +158,34 @@ class MusicController
     end
   end
 
+  # The loop mode (:off, :song or :queue), :off when no music has started here
+  def loop_mode(guild_id)
+    with_lock('loop_mode', :off) { @servers[guild_id]&.queue&.loop_mode || :off }
+  end
+
+  # !loop and the Loop button: off -> song -> queue -> off. Returns the new mode, or nil when nothing is playing
+  def cycle_loop(guild_id)
+    with_lock('cycle_loop') do |later|
+      loop_locked(@servers[guild_id], guild_id, later) { |queue| queue.cycle_loop! }
+    end
+  end
+
+  # !loop song (or off, queue): sets one mode. Returns it, or nil when nothing is playing
+  def set_loop(guild_id, mode)
+    with_lock('set_loop') do |later|
+      loop_locked(@servers[guild_id], guild_id, later) { |queue| queue.loop_mode = mode }
+    end
+  end
+
+  # Mixes the waiting songs into a random order. Returns how many were mixed (0 = nothing to mix).
+  # The panel only shows how many songs wait, so it does not change
+  def shuffle(guild_id)
+    with_lock('shuffle', 0) do
+      state = @servers[guild_id]
+      state ? state.queue.shuffle! : 0
+    end
+  end
+
   # Stops the music, empties the queue, leaves voice and marks the panel stopped
   def stop(guild_id)
     with_lock('stop') do |later|
@@ -219,9 +247,10 @@ class MusicController
     moved
   end
 
-  # The next waiting song becomes current and starts, or the idle wait starts when none waits
-  def move_on(state, guild_id, later)
-    state.queue.advance!
+  # The next song becomes current and starts, or the idle wait starts when none waits.
+  # `why` (:finished, :skipped or :failed) is why the current song ends; the loop mode uses it (MusicQueue#advance!)
+  def move_on(state, guild_id, later, why = :failed)
+    state.queue.advance!(why)
     begin_song(state, guild_id, later)
   end
 
@@ -245,6 +274,17 @@ class MusicController
 
   def send_play(state, guild_id, track)
     state.song_sent = @bridge.send_command('play', guild: guild_id, url: track.url, volume: state.volume)
+  end
+
+  # --- loop ---
+
+  # Changes the loop mode with the block and refreshes the panel. nil when no song is current
+  def loop_locked(state, guild_id, later)
+    return nil if state.nil? || state.queue.current.nil?
+
+    yield state.queue
+    later << -> { refresh_panel(guild_id) }
+    state.queue.loop_mode
   end
 
   # --- volume ---
@@ -302,7 +342,7 @@ class MusicController
       @bridge.send_command('stop', guild: guild_id)
       state.skipping = true
     else
-      move_on(state, guild_id, later)
+      move_on(state, guild_id, later, :skipped)
     end
     true
   end
@@ -328,13 +368,14 @@ class MusicController
     end
   end
 
-  # The current song is over: play the next one.
+  # The current song is over: play the next one (or the same one, when it loops).
+  # It ended because of a skip when `skipping` is set (Node answers a stop with "finished").
   # A song that ended normally means playing works, so the failure count starts again
   def song_ended(state, guild_id, later)
     return unless state.song_sent # left over from a stopped song: Node has nothing of ours
 
     state.failures_in_a_row = 0
-    move_on(state, guild_id, later)
+    move_on(state, guild_id, later, state.skipping ? :skipped : :finished)
   end
 
   # Joining failed (before "joined"): give up on this server with one message.

@@ -39,6 +39,10 @@ class FakeController
   def skip(_guild_id) = record(:skip, @skip_result)
   def skip_playlist(_guild_id) = record(:skip_playlist, 0)
   def clear_queue(_guild_id) = record(:clear_queue, 0)
+  def shuffle(_guild_id) = record(:shuffle, @shuffle_result || 0)
+  def cycle_loop(_guild_id) = record(:cycle_loop, @voice_channel ? :song : nil)
+  def set_loop(_guild_id, mode) = record([:set_loop, mode], @voice_channel ? mode : nil)
+  attr_writer :shuffle_result
   def stop(_guild_id) = record(:stop, nil)
   def volume(_guild_id) = @voice_channel ? 50 : nil
   def set_volume(_guild_id, level) = record([:set_volume, level], @voice_channel ? level.clamp(0, 100) : nil)
@@ -275,6 +279,81 @@ class MusicCommandsTest < Minitest::Test
     assert_equal [:skip], controller.calls
   end
 
+  def test_loop_alone_goes_to_the_next_mode
+    event = MusicCommandEvent.new(20)
+    controller = FakeController.new(voice_channel: 20)
+    run_command(event, :loop, [], controller)
+    assert_equal [:cycle_loop], controller.calls
+    assert_equal "🔂 Loop: this song.", event.channel.temporary.first.first
+  end
+
+  def test_loop_with_a_mode_sets_it
+    { "off" => ["➡️ Loop off.", :off], "SONG" => ["🔂 Loop: this song.", :song],
+      "queue" => ["🔁 Loop: the whole queue.", :queue] }.each do |word, (text, mode)|
+      event = MusicCommandEvent.new(20)
+      controller = FakeController.new(voice_channel: 20)
+      run_command(event, :loop, [word], controller)
+      assert_equal [[:set_loop, mode]], controller.calls
+      assert_equal text, event.channel.temporary.first.first
+    end
+  end
+
+  def test_loop_with_an_unknown_word_shows_usage
+    event = MusicCommandEvent.new(20)
+    controller = FakeController.new(voice_channel: 20)
+    run_command(event, :loop, ["forever"], controller)
+    assert_empty controller.calls
+    assert_equal MUSIC_LOOP_USAGE, event.channel.temporary.first.first
+  end
+
+  def test_loop_when_nothing_plays
+    event = MusicCommandEvent.new(20)
+    controller = FakeController.new(voice_channel: 20)
+    controller.define_singleton_method(:cycle_loop) { |_guild_id| nil }
+    run_command(event, :loop, [], controller)
+    assert_equal "🎵 Nothing is playing.", event.channel.temporary.first.first
+  end
+
+  def test_loop_from_outside_voice_is_refused
+    event = MusicCommandEvent.new(nil)
+    controller = FakeController.new(voice_channel: 20)
+    run_command(event, :loop, ["song"], controller)
+    assert_equal "🎧 Join <#20> to control the music.", event.channel.temporary.first.first
+    assert_empty controller.calls
+  end
+
+  # The panel shows the new mode, so the button says nothing
+  def test_loop_button_cycles_quietly
+    event = MusicButtonEvent.new("music:loop", 20)
+    controller = FakeController.new(voice_channel: 20)
+    music_button(event, controller, parts: NO_PARTS_MISSING)
+    assert_equal [:cycle_loop], controller.calls
+    assert_empty event.followups
+  end
+
+  def test_shuffle_says_how_many_songs_were_mixed
+    event = MusicCommandEvent.new(20)
+    controller = FakeController.new(voice_channel: 20)
+    controller.shuffle_result = 4
+    run_command(event, :shuffle, [], controller)
+    assert_equal [:shuffle], controller.calls
+    assert_equal "🔀 Shuffled 4 songs.", event.channel.temporary.first.first
+  end
+
+  def test_shuffle_with_nothing_to_mix
+    event = MusicCommandEvent.new(20)
+    run_command(event, :shuffle, [], FakeController.new(voice_channel: 20))
+    assert_equal "🔀 Nothing to shuffle.", event.channel.temporary.first.first
+  end
+
+  def test_shuffle_from_outside_voice_is_refused
+    event = MusicCommandEvent.new(nil)
+    controller = FakeController.new(voice_channel: 20)
+    run_command(event, :shuffle, [], controller)
+    assert_equal "🎧 Join <#20> to control the music.", event.channel.temporary.first.first
+    assert_empty controller.calls
+  end
+
   def test_pause_and_resume
     event = MusicCommandEvent.new(20)
     controller = FakeController.new(voice_channel: 20)
@@ -353,7 +432,8 @@ class MusicCommandsTest < Minitest::Test
   end
 
   def test_every_button_maps_to_an_action
-    { "music:skip" => :skip, "music:skipplaylist" => :skip_playlist, "music:clearqueue" => :clear_queue }.each do |id, call|
+    { "music:skip" => :skip, "music:skipplaylist" => :skip_playlist, "music:clearqueue" => :clear_queue,
+      "music:shuffle" => :shuffle }.each do |id, call|
       event = MusicButtonEvent.new(id, 20)
       controller = FakeController.new(voice_channel: 20)
       music_button(event, controller, parts: NO_PARTS_MISSING)

@@ -110,6 +110,28 @@ class MusicAiActionsTest < Minitest::Test
     assert_equal "Cleared 0 songs from the queue.", run_action(controller, "clear_queue")
   end
 
+  def test_ai_loop_modes
+    { "loop_off" => ["Loop is now off.", :off], "loop_song" => ["Now looping this song.", :song],
+      "loop_queue" => ["Now looping the whole queue.", :queue] }.each do |action, (text, mode)|
+      controller = FakeController.new(voice_channel: 10)
+      assert_equal text, run_action(controller, action)
+      assert_equal [[:set_loop, mode]], controller.calls
+    end
+  end
+
+  def test_ai_loop_when_nothing_plays
+    controller = FakeController.new(voice_channel: 10)
+    controller.define_singleton_method(:set_loop) { |_guild_id, _mode| nil }
+    assert_equal "Nothing is playing.", run_action(controller, "loop_song")
+  end
+
+  def test_ai_shuffle
+    controller = FakeController.new(voice_channel: 10)
+    assert_equal "Nothing to shuffle.", run_action(controller, "shuffle")
+    controller.shuffle_result = 3
+    assert_equal "Shuffled 3 songs.", run_action(controller, "shuffle")
+  end
+
   def test_ai_stop
     controller = FakeController.new(voice_channel: 10)
     assert_equal "Stopped the music.", run_action(controller, "stop")

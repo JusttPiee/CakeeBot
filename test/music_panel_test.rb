@@ -69,9 +69,39 @@ class MusicPanelTest < Minitest::Test
     refute_includes music_panel_embed(track, 0, false).description, "%"
   end
 
-  def test_volume_buttons_are_on_a_second_row
+  def test_volume_loop_and_shuffle_buttons_are_on_a_second_row
     rows = music_panel_view(false).to_a
-    assert_equal %w[music:voldown music:volup], rows[1][:components].map { |c| c[:custom_id] }
+    assert_equal %w[music:voldown music:volup music:loop music:shuffle], rows[1][:components].map { |c| c[:custom_id] }
+  end
+
+  # Every button has an emoji. Text-style symbols need U+FE0F, or Discord may refuse the panel
+  def test_every_button_has_an_emoji
+    buttons = music_panel_view(false).to_a.flat_map { |row| row[:components] }
+    emojis = buttons.to_h { |button| [button[:custom_id], button.dig(:emoji, :name)] }
+    assert_equal({ "music:toggle" => "⏸\u{FE0F}", "music:skip" => "⏭\u{FE0F}", "music:skipplaylist" => "⏩",
+                   "music:queue" => "📜", "music:clearqueue" => "🗑\u{FE0F}", "music:voldown" => "🔉",
+                   "music:volup" => "🔊", "music:loop" => "➡\u{FE0F}", "music:shuffle" => "🔀" }, emojis)
+    assert_equal "▶\u{FE0F}", music_panel_view(true).to_a.first[:components].first.dig(:emoji, :name)
+  end
+
+  def test_second_row_labels_have_no_emoji_in_the_text
+    labels = music_panel_view(false).to_a[1][:components].map { |c| c[:label] }
+    assert_equal ["-#{MUSIC_VOLUME_STEP}%", "+#{MUSIC_VOLUME_STEP}%", "Loop: Off", "Shuffle"], labels
+  end
+
+  # The Loop button shows the mode it is in now
+  def test_loop_button_follows_the_mode
+    { off: ["Loop: Off", "➡\u{FE0F}"], song: ["Loop: Song", "🔂"], queue: ["Loop: Queue", "🔁"] }.each do |mode, (label, emoji)|
+      button = music_panel_view(false, mode).to_a[1][:components].find { |c| c[:custom_id] == "music:loop" }
+      assert_equal [label, emoji], [button[:label], button.dig(:emoji, :name)], mode
+    end
+  end
+
+  def test_embed_shows_the_loop_mode_only_when_on
+    song = MusicTrack.new(title: "a", requester_id: 5)
+    refute_includes music_panel_embed(song, 0, false, 50, :off).description, "Loop"
+    assert_includes music_panel_embed(song, 0, false, 50, :song).description, "🔂 Looping this song"
+    assert_includes music_panel_embed(song, 0, false, 50, :queue).description, "🔁 Looping the queue"
   end
 
   def test_buttons_and_toggle_label

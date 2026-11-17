@@ -22,15 +22,19 @@ MUSIC_BUTTON_ACTIONS = {
   'music:queue' => :queue,
   'music:clearqueue' => :clearqueue,
   'music:voldown' => :voldown,
-  'music:volup' => :volup
+  'music:volup' => :volup,
+  'music:loop' => :loop,
+  'music:shuffle' => :shuffle
 }.freeze
 
 MUSIC_VOLUME_USAGE = "Usage: `!volume <0-100>`"
+MUSIC_LOOP_USAGE = "Usage: `!loop` or `!loop off|song|queue`"
+MUSIC_LOOP_TEXTS = { off: "➡️ Loop off.", song: "🔂 Loop: this song.", queue: "🔁 Loop: the whole queue." }.freeze
 
 # --- commands ---
 
-# One music command (!play, !volume, !pause, !resume, !skip, !skipplaylist, !queue, !clearqueue, !stop). Returns nil.
-# parts and finder are only replaced in tests.
+# One music command (!play, !volume, !loop, !pause, !resume, !skip, !skipplaylist, !queue, !clearqueue, !shuffle,
+# !stop). Returns nil. parts and finder are only replaced in tests.
 def music_command(event, action, args, controller, parts: method(:music_missing_parts), finder: method(:find_music))
   return nil if event.server.nil?
   return music_note(event, MUSIC_UNAVAILABLE_TEXT) if music_unavailable?(controller, parts)
@@ -39,6 +43,8 @@ def music_command(event, action, args, controller, parts: method(:music_missing_
     music_play(event, args, controller, finder)
   elsif action == :volume
     music_volume(event, args, controller)
+  elsif action == :loop
+    music_loop(event, args, controller)
   else
     music_control(event, action, controller)
   end
@@ -144,6 +150,26 @@ def music_volume(event, args, controller)
   music_note(event, music_volume_text(controller.set_volume(guild_id, level)))
 end
 
+# !loop goes to the next mode (off -> song -> queue), !loop off|song|queue sets one.
+# Same rule as the other controls: only people in Cake's voice channel
+def music_loop(event, args, controller)
+  problem = music_user_problem(event, :loop, controller)
+  return music_note(event, problem) if problem
+
+  guild_id = event.server.id
+  return music_note(event, music_loop_text(controller.cycle_loop(guild_id))) if args.empty?
+
+  mode = MUSIC_LOOP_MODES.find { |known| known.to_s == args.first.to_s.downcase }
+  return music_note(event, MUSIC_LOOP_USAGE) if mode.nil?
+
+  music_note(event, music_loop_text(controller.set_loop(guild_id, mode)))
+end
+
+# What !loop says about the new mode, or "Nothing is playing." when there is no song (the mode is nil)
+def music_loop_text(mode)
+  MUSIC_LOOP_TEXTS.fetch(mode, "🎵 Nothing is playing.")
+end
+
 # "30" or "30%" => 30. Anything else => nil
 def music_volume_level(text)
   Integer(text.to_s.delete_suffix('%'), 10, exception: false)
@@ -175,10 +201,17 @@ def music_run_action(action, guild_id, controller)
   when :skip then controller.skip(guild_id) ? nil : "🎵 Nothing to skip."
   when :skipplaylist then music_do_and_say_nothing { controller.skip_playlist(guild_id) }
   when :clearqueue then music_do_and_say_nothing { controller.clear_queue(guild_id) }
+  when :loop then controller.cycle_loop(guild_id) ? nil : "🎵 Nothing is playing."
+  when :shuffle then music_shuffle_text(controller.shuffle(guild_id))
   when :stop then music_do_and_say_nothing { controller.stop(guild_id) }
   when :voldown then controller.change_volume(guild_id, -MUSIC_VOLUME_STEP) ? nil : "🎵 Nothing is playing."
   when :volup then controller.change_volume(guild_id, MUSIC_VOLUME_STEP) ? nil : "🎵 Nothing is playing."
   end
+end
+
+# The panel does not show the order of the songs, so shuffle always says what it did
+def music_shuffle_text(mixed)
+  mixed.zero? ? "🔀 Nothing to shuffle." : "🔀 Shuffled #{mixed} songs."
 end
 
 # Runs the block and returns nil (no note), whatever the block returns

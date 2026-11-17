@@ -349,6 +349,89 @@ class MusicControllerTest < Minitest::Test
     assert_equal ["a", []], [@music.queue_snapshot(1).first.title, @music.queue_snapshot(1).last]
   end
 
+  # --- loop ---
+
+  def finished = @music.handle_event("event" => "finished", "guild" => "1")
+
+  def test_loop_needs_a_song
+    assert_nil @music.cycle_loop(1)
+    assert_nil @music.set_loop(1, :song)
+  end
+
+  def test_cycle_and_set_loop_refresh_the_panel
+    @music.play(1, 10, @channel, [track("a")])
+    shows = @poster.shows.length
+    assert_equal :song, @music.cycle_loop(1)
+    assert_equal :queue, @music.set_loop(1, :queue)
+    assert_equal :queue, @music.loop_mode(1)
+    assert_equal shows + 2, @poster.shows.length
+  end
+
+  def test_loop_song_plays_the_finished_song_again
+    @music.play(1, 10, @channel, [track("a"), track("b")])
+    @music.set_loop(1, :song)
+    finished
+    assert_equal [["play", 1, "u/a"], ["play", 1, "u/a"]], @bridge.ops.select { |op| op.first == "play" }
+  end
+
+  def test_skip_in_loop_song_moves_to_the_next_song
+    @music.play(1, 10, @channel, [track("a"), track("b")])
+    @music.set_loop(1, :song)
+    @music.skip(1)
+    finished # Node's answer to the stop
+    assert_equal ["play", 1, "u/b"], @bridge.ops.last
+    assert_equal :song, @music.loop_mode(1)
+  end
+
+  def test_loop_queue_puts_finished_and_skipped_songs_at_the_end
+    @music.play(1, 10, @channel, [track("a"), track("b"), track("c")])
+    @music.set_loop(1, :queue)
+    finished # a ends
+    @music.skip(1)
+    finished # b skipped
+    current, waiting = @music.queue_snapshot(1)
+    assert_equal ["c", %w[a b]], [current.title, waiting.map(&:title)]
+  end
+
+  def test_failed_song_is_not_looped
+    @music.play(1, 10, @channel, [track("a"), track("b")])
+    @music.set_loop(1, :queue)
+    @music.handle_event("event" => "failed", "guild" => "1", "reason" => "broken")
+    current, waiting = @music.queue_snapshot(1)
+    assert_equal ["b", []], [current.title, waiting]
+  end
+
+  def test_skip_playlist_in_loop_queue_drops_the_playlist
+    @music.play(1, 10, @channel, [track("p1", "P"), track("p2", "P"), track("solo")])
+    @music.set_loop(1, :queue)
+    @music.skip_playlist(1)
+    finished
+    current, waiting = @music.queue_snapshot(1)
+    assert_equal ["solo", []], [current.title, waiting]
+  end
+
+  def test_stop_turns_loop_off
+    @music.play(1, 10, @channel, [track("a")])
+    @music.set_loop(1, :queue)
+    @music.stop(1)
+    @music.play(1, 10, @channel, [track("b")])
+    assert_equal :off, @music.loop_mode(1)
+  end
+
+  def test_shuffle_mixes_the_waiting_songs
+    @music.play(1, 10, @channel, %w[a b c d e f].map { |title| track(title) })
+    assert_equal 5, @music.shuffle(1)
+    current, waiting = @music.queue_snapshot(1)
+    assert_equal "a", current.title
+    assert_equal %w[b c d e f], waiting.map(&:title).sort
+  end
+
+  def test_shuffle_with_nothing_to_mix
+    assert_equal 0, @music.shuffle(1) # no music in this server
+    @music.play(1, 10, @channel, [track("a"), track("b")])
+    assert_equal 0, @music.shuffle(1) # one waiting song
+  end
+
   def test_stop_sends_stop_and_leave
     @music.play(1, 10, @channel, [track("a")])
     @music.stop(1)

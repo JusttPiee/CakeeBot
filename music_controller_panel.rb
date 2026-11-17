@@ -31,9 +31,9 @@ class MusicController
     track = state&.queue&.current
     return nil if track.nil? || state.text_channel.nil?
 
-    paused = state.queue.paused
-    embed = music_panel_embed(track, state.queue.size, paused, state.volume)
-    [guild_id, state.text_channel, embed, music_panel_view(paused)]
+    queue = state.queue
+    embed = music_panel_embed(track, queue.size, queue.paused, state.volume, queue.loop_mode)
+    [guild_id, state.text_channel, embed, music_panel_view(queue.paused, queue.loop_mode)]
   end
 
   def panel_lock(guild_id)

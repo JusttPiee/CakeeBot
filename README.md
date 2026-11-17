@@ -39,7 +39,7 @@ A multifunctional Discord bot written in Ruby. It can:
 
 **Word chain rules:** each word must be a real English word, can't be reused, and must start with the last letter of the previous word. The same person can't go twice in a row. After 3 wrong attempts, the game ends and the last player with a valid word wins.
 
-**Music:** `!play` takes a YouTube, SoundCloud or Spotify link (a song or a playlist) or just a song name, and plays it in the voice channel you are in. Cake shows a panel with buttons (pause, skip, skip playlist, queue, clear queue, volume down / up) and leaves when the queue ends for a while, or when everyone else leaves the channel. To use it you need:
+**Music:** `!play` takes a YouTube, SoundCloud or Spotify link (a song or a playlist) or just a song name, and plays it in the voice channel you are in. Cake shows a panel with buttons (pause, skip, skip playlist, queue, clear queue, volume down / up, loop, shuffle) and leaves when the queue ends for a while, or when everyone else leaves the channel. To use it you need:
 
 1. **yt-dlp** and **ffmpeg** installed and on your PATH, plus **Node.js**. Keep yt-dlp updated (`yt-dlp -U`): YouTube changes often, and an old yt-dlp is the usual reason songs stop playing.
 2. The music part installed once: `cd music && npm install`.
