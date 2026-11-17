@@ -4,6 +4,7 @@
 # The answer's :name: emojis are converted to Discord's form only here, so the history keeps :name:.
 require_relative './config'
 require_relative './message_splitter'
+require_relative './message_edit' # Message#edit_without_ping
 require_relative './emoji_library'
 require_relative './ai_chat' # ask_ai
 require_relative './command_context' # done_if_command_ran
@@ -84,7 +85,7 @@ def edit_or_reply(event, thinking, chunk)
 
   if thinking
     begin
-      thinking.edit(chunk)
+      thinking.edit_without_ping(chunk) # a plain edit would ping the person again (message_edit.rb)
       return thinking
     rescue StandardError => e
       log "😀 could not edit the Thinking line (#{e.class}), replying instead"

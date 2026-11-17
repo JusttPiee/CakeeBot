@@ -169,9 +169,9 @@ class MentionChatTest < Minitest::Test
       @sent[id - 1] = text
     end
 
-    # A message Cake sent. edit works like discordrb's Message#edit.
+    # A message Cake sent. edit_without_ping works like the one in message_edit.rb.
     SentMessage = Struct.new(:id, :event) do
-      def edit(text) = event.edited(id, text) && self
+      def edit_without_ping(text) = event.edited(id, text) && self
     end
   end
 

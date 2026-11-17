@@ -2,7 +2,8 @@ require_relative "test_helper"
 require_relative "../config"
 require_relative "../thinking_reply"
 
-# A sent Discord message that remembers its edits. edit_fails: true makes edit raise, like a deleted message.
+# A sent Discord message that remembers its edits. edit_fails: true makes the edit raise, like a deleted message.
+# Only edit_without_ping exists: a plain edit would ping the person again (see message_edit.rb).
 class FakeThinkingMessage
   attr_reader :id, :edits
 
@@ -12,7 +13,7 @@ class FakeThinkingMessage
     @edits = []
   end
 
-  def edit(text)
+  def edit_without_ping(text)
     raise "Unknown Message" if @edit_fails
 
     @edits << text
