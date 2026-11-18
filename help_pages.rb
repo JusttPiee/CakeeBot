@@ -6,7 +6,8 @@ require_relative './config'
 
 HELP_COLOR = 0x5DADE2 # light blue, the same as the old single-page !help
 HELP_TITLE = "📘 Manual for Cake"
-HELP_FOOTER = "Made by Piee"
+HELP_CLOSE_AFTER_MINUTES = 5 # the help message deletes itself this long after it was posted (help_command.rb)
+HELP_FOOTER = "Closes #{HELP_CLOSE_AFTER_MINUTES} minutes after opening · Made by Piee"
 HELP_OVERVIEW_ID = "overview" # the menu value that goes back to the overview
 
 # Each category: id (used in `!help <id>` and in the menu), emoji, title, and [command, explanation] pairs

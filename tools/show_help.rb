@@ -23,8 +23,7 @@ def run_show_help(arguments, context)
 
   id = help_category_id(arguments["category"])
   title = id ? help_category(id)[:title] : "Overview"
-  embed = help_page_embed(id, context[:avatar_url])
-  context[:post_channel].send_message("", false, embed, nil, nil, nil, help_menu_view(context[:requester_id], id))
+  post_help_page(context[:post_channel], context[:requester_id], id, context[:avatar_url])
   add_command_label(context, "showed help: #{title}")
   "Showed the help page #{title}."
 end

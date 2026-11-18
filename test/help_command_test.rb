@@ -96,6 +96,31 @@ class HelpCommandTest < Minitest::Test
     assert_nil help_menu_owner("help:abc")
   end
 
+  def test_help_message_is_deleted_later
+    channel = Object.new
+    message = Object.new
+    def message.delete = (@deleted = true)
+    def message.deleted? = @deleted
+    channel.define_singleton_method(:send_message) { |*_args| message }
+    waits = []
+    later = []
+    scheduler = ->(seconds, &block) { waits << seconds; later << block }
+
+    post_help_page(channel, 7, nil, nil, scheduler: scheduler)
+    assert_equal [HELP_CLOSE_AFTER_MINUTES * 60], waits
+    refute message.deleted?
+
+    later.each(&:call)
+    assert message.deleted?
+  end
+
+  def test_already_deleted_help_message_is_only_logged
+    message = Object.new
+    def message.delete = raise("Unknown Message")
+    delete_help_message(message)
+    assert(LOGS.any? { |line| line.include?("could not delete a help message") })
+  end
+
   def test_a_crash_is_logged_not_raised
     event = HelpEvent.new(user_id: 7)
     def event.channel = raise("Discord is down")
