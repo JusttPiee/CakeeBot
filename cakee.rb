@@ -50,6 +50,7 @@ require_relative './clear_messages' # !clear: admins delete recent messages
 require_relative './ai_clear_confirm' # the Yes / No buttons when the AI is asked to delete messages
 require_relative './silent_chat' # !silent: ask Cake privately, the answer goes to DMs
 require_relative './help_command' # !help: the command list, one category per page
+require_relative './help_cleanup' # on startup: delete help messages left over from before the restart
 require_relative './web_api/web_server' # The web UI at http://localhost:4567 (see web_api/)
 
 # Read a required secret. If it is missing, ask for it once in the terminal and save it to .env,
@@ -599,6 +600,7 @@ bot.ready do |event|
   start_memory_tidy_once(client, event.bot, bot_state[:histories]) # here, because sending memory questions needs the connection
   start_music(music_bridge) # here too: Node logs in with the same token
   start_emoji_refresh_once(event.bot, client) # the emoji list needs the connection too
+  start_help_cleanup_once(event.bot) # old help messages: their delete timers were lost in the restart
   start_web_ui(event.bot, client, bot_state[:histories], ai_config_path, ENV_FILE) # here, because it lists the bot's servers
 end
 
