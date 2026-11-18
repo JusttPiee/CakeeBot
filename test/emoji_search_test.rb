@@ -60,14 +60,16 @@ class EmojiSearchTest < Minitest::Test
     lib = library_with(%w[sad:crying])
     assert_equal "", emoji_prompt_section(lib, 0)
     assert_equal "## Your custom emojis\nYou have your own custom emojis. Use them often and playfully, especially to show feelings. " \
-                 "Write them as :name:. Your favourites: :sad: — crying. For anything else, call find_emoji.",
+                 "Write them as :name:. Use them instead of standard emojis (like 😭 💖 ✨): only use a standard emoji when none of yours fits. " \
+                 "Your earlier replies may have standard emojis; don't copy that habit. " \
+                 "Your favourites: :sad: — crying. For anything else, call find_emoji.",
                  emoji_prompt_section(lib, 3)
   end
 
   def test_suggestion_line
     lib = library_with(%w[sad:crying dance:party])
     line = emoji_suggestion_line(:client, lib, "I'm sad", 1, embedder: fake_embedder)
-    assert_equal "Suggested emojis for this message: :sad: — crying", line
+    assert_equal "Suggested emojis for this message (use these instead of standard emojis): :sad: — crying", line
   end
 
   def test_suggestion_line_is_empty_on_error_or_zero_or_empty_library

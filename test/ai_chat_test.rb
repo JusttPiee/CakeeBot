@@ -359,7 +359,7 @@ class AiChatTest < Minitest::Test
     instructions = client.requests.first[:instructions]
     assert_includes instructions, "## Your custom emojis"
     assert instructions.index("## Your custom emojis") < instructions.index("Today's date")
-    assert instructions.end_with?("Suggested emojis for this message: :sad: — crying")
+    assert instructions.end_with?("Suggested emojis for this message (use these instead of standard emojis): :sad: — crying")
   end
 
   def test_ask_ai_without_emojis_adds_nothing

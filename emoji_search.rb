@@ -78,7 +78,9 @@ def emoji_prompt_section(library, count = EMOJI_FAVOURITES)
   return "" if library.empty? || count.to_i <= 0
 
   "## Your custom emojis\nYou have your own custom emojis. Use them often and playfully, especially to show feelings. " \
-    "Write them as :name:. Your favourites: #{emoji_line(library.favourites(count))}. For anything else, call find_emoji."
+    "Write them as :name:. Use them instead of standard emojis (like 😭 💖 ✨): only use a standard emoji when none of yours fits. " \
+    "Your earlier replies may have standard emojis; don't copy that habit. " \
+    "Your favourites: #{emoji_line(library.favourites(count))}. For anything else, call find_emoji."
 end
 
 # Emojis that fit the newest message. Never raises: any error means no suggestions (no word fallback here).
@@ -86,7 +88,7 @@ def emoji_suggestion_line(client, library, text, count = EMOJI_SUGGESTIONS, embe
   return "" if library.empty? || count.to_i <= 0
 
   found = rank_by_meaning(client, library, text, count, embedder)
-  found.empty? ? "" : "Suggested emojis for this message: #{emoji_line(found)}"
+  found.empty? ? "" : "Suggested emojis for this message (use these instead of standard emojis): #{emoji_line(found)}"
 rescue StandardError => e
   log "😀 emoji suggestions failed (#{e.class})"
   ""
