@@ -2,8 +2,9 @@
 # One file per hour, in one folder per day: logs/2026-11-07/14.log (ignored by git, *.log in .gitignore).
 # Tests point this at a temp folder. Keep this file free of config.rb: cakee.rb needs it before .env is loaded.
 require 'fileutils'
+require_relative './data_paths'
 
-MESSAGE_LOG_DIR = ENV['CAKE_TEST_LOG_DIR'] || File.join(__dir__, 'logs')
+MESSAGE_LOG_DIR = ENV['CAKE_TEST_LOG_DIR'] || data_path('logs')
 MESSAGE_LOG_LOCK = Mutex.new # Messages arrive on different threads, so write one line at a time
 
 def format_log_time(time)

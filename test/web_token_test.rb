@@ -25,6 +25,14 @@ class WebTokenTest < Minitest::Test
     assert_equal "OPENAI_MODEL=x\nWEB_UI_TOKEN=#{token}\n", File.read(path)
   end
 
+  # The folder does not exist, so the save fails on every OS
+  def test_a_token_that_cannot_be_saved_still_works_this_run
+    ENV.delete("WEB_UI_TOKEN")
+    LOGS.clear
+    Dir.mktmpdir { |dir| assert_match(/\A\h{48}\z/, load_or_create_web_token(File.join(dir, "missing", ".env"))) }
+    assert(LOGS.any? { |line| line.include?("could not be saved") })
+  end
+
   def test_uses_the_token_already_set
     ENV["WEB_UI_TOKEN"] = "mine"
     assert_equal "mine", load_or_create_web_token(File.join(Dir.mktmpdir, ".env"))

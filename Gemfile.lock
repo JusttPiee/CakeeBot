@@ -24,6 +24,7 @@ GEM
     faraday-net_http (3.5.0)
       net-http (~> 0.5)
     ffi (1.17.4-x64-mingw-ucrt)
+    ffi (1.17.4-x86_64-linux-gnu)
     http-accept (1.7.0)
     http-cookie (1.1.6)
       domain_name (~> 0.5)
@@ -86,6 +87,7 @@ GEM
 
 PLATFORMS
   x64-mingw-ucrt
+  x86_64-linux
 
 DEPENDENCIES
   discordrb (~> 3.8)

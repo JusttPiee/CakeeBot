@@ -4,6 +4,7 @@ require 'date'
 require_relative './token_usage' # one 🪙 line per OpenAI request
 require_relative './recent_activity' # "Recently, in other channels" in the prompt
 require_relative './prompts'
+require_relative './data_paths'
 require_relative './chat_history'
 require_relative './message_splitter'
 require_relative './tool_list'
@@ -15,7 +16,7 @@ require_relative './emoji_search' # emoji parts of the prompt
 # The bot's personality: who it is and how it talks. Edit prompts/personality.txt to change it, no code needed.
 # {bot_name} is replaced with the bot's name in the server. Changes apply on the next message, no restart.
 # The file is local to each bot (git ignored). If it is missing, it is created from personality.default.txt.
-PERSONALITY_FILE = File.join(PROMPTS_DIR, 'personality.txt')
+PERSONALITY_FILE = personality_path(data_dir_set? ? DATA_DIR : nil) # in Docker: the data folder
 
 # Shared by every bot and kept out of the personality, so editing it can't break them
 # and new commands reach every bot. Loaded once, at startup.

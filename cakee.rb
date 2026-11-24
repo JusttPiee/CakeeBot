@@ -5,8 +5,12 @@ require 'openai' # OpenAI lib from https://github.com/alexrudall/ruby-openai
 require 'dotenv' # Load secrets from a .env file into ENV
 require 'io/console' # Hide secrets while the user types them
 require_relative './message_logger' # Save messages, AI replies and status lines to logs/<day>/<hour>.log
+require_relative './data_paths' # Where the bot's files live (the project folder, or CAKE_DATA_DIR in Docker)
+require_relative './env_file' # When .env is created, and which blank variables to ignore
 
-ENV_FILE = File.join(__dir__, '.env') # .env lives next to cakee.rb
+$stdout.sync = true # show each line right away, also when the output is not a terminal (docker compose logs)
+
+ENV_FILE = data_path('.env') # next to cakee.rb, or in the data folder in Docker
 ENV_TEMPLATE = File.join(__dir__, '.env.example') # Template listing every setting, with explanations
 
 # Print a timestamped line to the terminal, and save it to the log file
@@ -17,18 +21,23 @@ end
 # First run: build .env from .env.example, so every setting (and its explanation) is already in the file
 if File.exist?(ENV_FILE)
   log "📄 Found .env at #{ENV_FILE}"
-elsif File.exist?(ENV_TEMPLATE)
+elsif create_env_from_template?(ENV_FILE, ENV_TEMPLATE, data_dir_set?)
   File.write(ENV_FILE, File.read(ENV_TEMPLATE))
   log "📄 No .env found, created one from .env.example at #{ENV_FILE}"
+elsif data_dir_set?
+  log "📄 Data folder: #{DATA_DIR} (settings come from the container's environment)"
 else
   log "📄 No .env or .env.example found (will create .env if a key is missing)"
 end
+
+seed_data_file('badwords.txt') if data_dir_set? # a new data folder starts with the word list that comes with the code
 
 # Remember which keys were already set by the OS (e.g. Windows environment variables) BEFORE loading .env.
 # Dotenv never overwrites existing variables, so an OS variable silently wins over .env.
 OS_ENV_KEYS = ENV.keys.select { |key| !ENV[key].to_s.strip.empty? }
 # overwrite: true makes parse return what the FILE says; without it, dotenv swaps in values already set in ENV
 DOTENV_VALUES = File.exist?(ENV_FILE) ? Dotenv.parse(ENV_FILE, overwrite: true) : {}
+drop_blank_variables(DOTENV_VALUES.keys)
 Dotenv.load(ENV_FILE) # Does nothing if the file does not exist
 
 # Our own files come AFTER .env is loaded: they load config.rb, which reads the settings from ENV.
@@ -67,7 +76,7 @@ def require_env(name, prompt)
     return value
   end
 
-  abort "❗ Missing #{name}. Set it as an environment variable or add #{name}=... to #{ENV_FILE}." unless $stdin.tty?
+  abort "❗ Missing #{name}. Set it as an environment variable or add #{name}=... to #{settings_place(ENV_FILE, data_dir_set?)}." unless $stdin.tty?
 
   print "#{prompt} (input is hidden): "
   value = $stdin.noecho(&:gets).to_s.strip
@@ -101,7 +110,7 @@ begin
   log "✅ Discord accepted DISCORD_BOT_TOKEN"
 rescue Discordrb::Errors::CodeError, RestClient::Unauthorized => e
   # Only treat "401: Unauthorized" as a bad token; anything else is just a warning
-  abort "❗ Discord rejected DISCORD_BOT_TOKEN (invalid token). Fix the DISCORD_BOT_TOKEN line in #{ENV_FILE}, or delete it and run the bot again to re-enter it." if e.message.include?('401')
+  abort "❗ Discord rejected DISCORD_BOT_TOKEN (invalid token). Fix the DISCORD_BOT_TOKEN line in #{settings_place(ENV_FILE, data_dir_set?)}, or delete it and run the bot again to re-enter it." if e.message.include?('401')
   log "⚠️ Could not verify DISCORD_BOT_TOKEN right now (#{e.message}). Trying to connect anyway."
 rescue StandardError => e
   log "⚠️ Could not verify DISCORD_BOT_TOKEN right now (#{e.class}). Trying to connect anyway."
@@ -130,7 +139,7 @@ begin
   client.models.list
   log "✅ OpenAI accepted OPENAI_API_KEY"
 rescue Faraday::UnauthorizedError
-  abort "❗ OpenAI rejected OPENAI_API_KEY (invalid key). Fix the OPENAI_API_KEY line in #{ENV_FILE}, or delete it and run the bot again to re-enter it."
+  abort "❗ OpenAI rejected OPENAI_API_KEY (invalid key). Fix the OPENAI_API_KEY line in #{settings_place(ENV_FILE, data_dir_set?)}, or delete it and run the bot again to re-enter it."
 rescue Faraday::Error => e
   log "⚠️ Could not verify OPENAI_API_KEY right now: #{describe_openai_error(e)}. Starting anyway; AI replies may fail."
 end
@@ -225,7 +234,7 @@ end
 
 
 def contains_bad_word?(message, bad_words) # Check if the message contains any bad words
-  bad_words = load_bad_words('badwords.txt') # Load the bad words from the badwords.txt file
+  bad_words = load_bad_words(BAD_WORDS_FILE) # Load the bad words from the badwords.txt file
   i = 0
   while i < bad_words.length # For each bad word in the array
     if message.downcase.include?(bad_words[i].downcase) # Check if the message contains the bad word in i position
@@ -241,7 +250,7 @@ bot.message do |event| # Save every message the bot receives (name + user ID) to
 end
 
 bot.message do |event| #checks for bad words in messages (triggers on every message)
-  bad_words = load_bad_words('badwords.txt') # Load the bad words from the badwords.txt file
+  bad_words = load_bad_words(BAD_WORDS_FILE) # Load the bad words from the badwords.txt file
   warning_message = "Don't use bad words! <@#{event.user.id}>" # Warning message to send if a bad word is found and mention the user who sent the message
   if event.message.content.start_with?('!') # Ignore checking when prefix is used
     next
@@ -253,8 +262,8 @@ bot.message do |event| #checks for bad words in messages (triggers on every mess
 end
 
 bot.command(:badword) do |event, action, *args| # Command to manage bad words (add, remove, list) (admin only)
-  file_path = 'badwords.txt' # Path to the bad words file
-  bad_words = load_bad_words('badwords.txt') # Load the bad words from the badwords.txt file, return array
+  file_path = BAD_WORDS_FILE # Path to the bad words file
+  bad_words = load_bad_words(BAD_WORDS_FILE) # Load the bad words from the badwords.txt file, return array
   if event.user.permission?(:administrator) 
     # Only allow admins to use the badword command
   else
@@ -352,7 +361,7 @@ def word_chain_game(bot) #Code for the word chain game
   last_user_id = nil
   wrong_attempts = 0
   bot.command(:wordchain) do |event| # Starts the game
-    ai_config_path = 'ai_config.txt' # Path to the AI channel ID file
+    ai_config_path = AI_CONFIG_FILE # Path to the AI channel ID file
     if ai_channel?(ai_config_path, event.channel.id) # If AI mode is active in the channel, prevent starting the game
       event.respond "⚠️ Neuron mode is currently active in this channel. Please deactivate it using `!neurondeactivate` before playing the game." # Send a warning message if AI mode is active
       next
@@ -429,7 +438,7 @@ end
 
 # AI functionality
 
-ai_config_path = 'ai_config.txt' # AI channel IDs, one per line (AI mode can be on in several channels)
+ai_config_path = AI_CONFIG_FILE # AI channel IDs, one per line (AI mode can be on in several channels)
 
 bot.command(:neuronactivate) do |event| # turn on AI mode
   if event.user.permission?(:administrator)

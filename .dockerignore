@@ -1,0 +1,22 @@
+# Secrets: never in the image
+.env
+.env.*
+!.env.example
+
+# What the bot writes: it lives in the mounted data folder
+data
+memory
+logs
+settings.json
+ai_config.txt
+prompts/personality.txt
+
+# Not needed to run the bot
+.git
+.github
+.idea
+.superpowers
+docs
+test
+**/node_modules
+web/dist

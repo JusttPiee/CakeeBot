@@ -1,0 +1,24 @@
+# Runs Cake on a server. Next to this file you need .env (the keys) and the folder data/.
+# See "Docker" in README.md.
+services:
+  cake:
+    image: ghcr.io/justtpiee/cakeebot:latest
+    build: . # only used by "docker compose build"; "docker compose pull" needs no code
+    user: "${CAKE_UID:-1000}:${CAKE_GID:-1000}" # must be allowed to write to data/
+    env_file: .env
+    environment: # wins over .env
+      TZ: ${TZ:-Australia/Melbourne}
+      CAKE_DATA_DIR: /data
+      WEB_UI_HOST: 0.0.0.0 # inside the container; "ports" below decides who can reach it
+    volumes:
+      - ./data:/data
+    ports:
+      # 127.0.0.1: only the server itself can open the web UI. Do not remove it.
+      - "127.0.0.1:${WEB_UI_PORT:-4567}:${WEB_UI_PORT:-4567}"
+    init: true
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"

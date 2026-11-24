@@ -1,7 +1,8 @@
 # Starts the web UI: the Sinatra app (web_app.rb) served by Puma on a background thread of the bot.
 # cakee.rb calls start_web_ui once Discord is connected.
 #
-# It listens on 127.0.0.1 only, so only this computer can open it.
+# It listens on 127.0.0.1 only, so only this computer can open it. Docker sets WEB_UI_HOST=0.0.0.0, because
+# 127.0.0.1 inside a container is the container itself; compose.yaml still opens the port to the server only.
 # If it can't start (the port is taken, for example), the bot just keeps running without it.
 #
 # Settings in .env: WEB_UI=off turns it off, WEB_UI_PORT changes the port, WEB_UI_TOKEN is made automatically.
@@ -13,7 +14,8 @@ require_relative './web_token'
 
 WEB_UI_DEFAULT_PORT = 4567
 WEB_UI_ALLOWED_PORTS = (1024..65_535) # below 1024 needs admin rights
-WEB_UI_HOST = "127.0.0.1"
+WEB_UI_DEFAULT_HOST = "127.0.0.1"
+WEB_UI_ALLOWED_HOSTS = [WEB_UI_DEFAULT_HOST, "0.0.0.0"].freeze
 WEB_UI_STATE = { started: false, server: nil }
 
 def web_ui_enabled?
@@ -24,6 +26,12 @@ def web_ui_port
   text = setting('WEB_UI_PORT', default: WEB_UI_DEFAULT_PORT.to_s)
   port = text.match?(/\A\d+\z/) ? text.to_i : WEB_UI_DEFAULT_PORT
   WEB_UI_ALLOWED_PORTS.cover?(port) ? port : WEB_UI_DEFAULT_PORT
+end
+
+# Anything but the two known addresses falls back to this computer only
+def web_ui_host
+  host = setting('WEB_UI_HOST', default: WEB_UI_DEFAULT_HOST)
+  WEB_UI_ALLOWED_HOSTS.include?(host) ? host : WEB_UI_DEFAULT_HOST
 end
 
 # Returns the running server, or nil if the web UI is off or could not start.
@@ -50,9 +58,9 @@ rescue StandardError => e
 end
 
 # Puma answers requests on its own threads (at most 4 at a time, plenty for one person), so the bot is never blocked.
-def run_web_server(app, port)
+def run_web_server(app, port, host = web_ui_host)
   server = Puma::Server.new(app, nil, { min_threads: 0, max_threads: 4, log_writer: Puma::LogWriter.null })
-  server.add_tcp_listener(WEB_UI_HOST, port)
+  server.add_tcp_listener(host, port)
   server.run # returns right away; the server keeps running in the background
   server
 end

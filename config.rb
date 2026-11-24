@@ -13,9 +13,10 @@ end
 
 # --- settings.json: what the web UI changed ---
 require 'json'
+require_relative './data_paths'
 
 # Tests point this at a temp file, so they never read the real settings.
-SETTINGS_FILE = ENV['CAKE_TEST_SETTINGS_FILE'] || File.join(__dir__, 'settings.json')
+SETTINGS_FILE = ENV['CAKE_TEST_SETTINGS_FILE'] || data_path('settings.json')
 CONFIG_DEFAULTS = {} # name => default, for every setting the web UI may change
 
 # { "MAX_HISTORY_MESSAGES" => 60 }. Empty if the file is missing, broken, or not a JSON object:
@@ -61,7 +62,7 @@ MAX_HISTORY_TOKENS = saved_setting('MAX_HISTORY_TOKENS', 5_000)
 
 # --- Long-term memory (see docs/superpowers/specs/2026-11-04-long-term-memory-design.md) ---
 # Where memory files live: memory/<server_id>/... (ignored by git). Tests point this at a temp folder.
-MEMORY_DIR = ENV['CAKE_TEST_MEMORY_DIR'] || File.join(__dir__, 'memory')
+MEMORY_DIR = ENV['CAKE_TEST_MEMORY_DIR'] || data_path('memory')
 
 # Compaction: when the history goes over MAX_HISTORY_MESSAGES / MAX_HISTORY_TOKENS (the "high mark"),
 # the oldest turns are summarized in one request and the history is cut down to this "low mark".

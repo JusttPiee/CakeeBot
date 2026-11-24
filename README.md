@@ -153,6 +153,62 @@ Then type `!help` in your server to get started. 🎉
 
 ---
 
+## Docker
+
+Runs Cake on a server without installing Ruby, Node, ffmpeg or yt-dlp. The server needs Docker with **Linux containers on x64** (`docker info --format '{{.OSType}}/{{.Architecture}}'` says `linux/x86_64`) and **Compose v2** (`docker compose version`).
+
+**1. Make a folder with three things:**
+
+```
+cake/
+├── compose.yaml   from this repository
+├── .env           a filled-in copy of .env.example
+└── data/          everything Cake remembers
+```
+
+```bash
+mkdir -p cake/data && cd cake
+curl -O https://raw.githubusercontent.com/JusttPiee/CakeeBot/main/compose.yaml
+curl -o .env https://raw.githubusercontent.com/JusttPiee/CakeeBot/main/.env.example
+chmod 600 .env && chmod 700 data   # only your user may read the keys and the memory
+```
+
+Make `data/` yourself, before the first start. Fill in `DISCORD_BOT_TOKEN` and `OPENAI_API_KEY` in `.env`: the container never asks for keys. If `id -u` and `id -g` are not `1000`, add `CAKE_UID=` and `CAKE_GID=` with your numbers to `.env`, or Cake can't write to `data/`.
+
+**2. Start it:**
+
+```bash
+docker compose pull
+docker compose up -d
+docker compose logs -f    # Ctrl+C only leaves the log
+```
+
+It starts again by itself after a crash or a reboot. If a key is wrong, it keeps trying; the log says why.
+
+| To... | Do this |
+|---|---|
+| Update Cake | `docker compose pull`, then `docker compose up -d` |
+| Change a key | Edit `.env`, then `docker compose up -d` (`restart` keeps the old value) |
+| Restart | `docker compose restart`, or Restart in the web UI |
+| Stop | `docker compose down` (`data/` stays) |
+| Get the newest yt-dlp | On GitHub: Actions > Docker > Run workflow. Then update Cake |
+| Go back to an old version | In `compose.yaml`, replace `latest` with the full commit id, then update |
+| Back up | Stop Cake, copy `data/`, start it again |
+
+**Moving from a PC:** stop the bot on the PC first, and don't start it again with the same token: two bots would both answer. Copy these into `data/` **once**, before the first start: `memory/`, `logs/`, `settings.json`, `ai_config.txt`, `badwords.txt`, and `prompts/personality.txt` as `data/personality.txt`. Copying them again later would overwrite what Cake learned on the server. The files must belong to the user from step 1.
+
+**Web UI:** only the server itself can open it. From your own computer, open a tunnel and keep it running, with the same port on both sides:
+
+```bash
+ssh -L 4567:localhost:4567 user@server
+```
+
+Then open the link with the token that is in `docker compose logs`.
+
+**Good to know:** anyone with root or Docker access on the server can read the keys and the memory. YouTube blocks many server addresses; then music fails while the rest keeps working. To build the image yourself, clone the repository and run `docker compose build`.
+
+---
+
 ## Configuration
 
 All settings live in `.env`, which the bot creates from `.env.example` on the first run. Every setting is listed there with an explanation: edit `.env` and restart the bot to change one. Don't edit `.env.example`; the bot doesn't read it after the first run.
@@ -168,6 +224,9 @@ You can also set them as normal environment variables, which is handy on servers
 | `DISCORD_INVITE_URL` | No | A custom link for `!invite`. If empty, the bot builds one automatically |
 | `TAVILY_API_KEY` | No | Lets the AI search the web ([tavily.com](https://tavily.com), free plan ~1,000 searches/month). If empty, web search is off |
 | `THINKING_EMOJI` | No | Name of one of the bot's own emojis to show in the "Thinking..." line. Default: `thinking`; if the bot has no emoji with that name, 🤔 is used |
+| `WEB_UI_HOST` | No | Leave empty. In Docker, `compose.yaml` sets it |
+| `TZ` | No | Docker only: the time zone. Default: `Australia/Melbourne` |
+| `CAKE_UID`, `CAKE_GID` | No | Docker only: the user that owns `data/`. Default: `1000` |
 
 To change a key, edit it in `.env`, or clear its value (leave `KEY=` empty) and the bot will ask again on the next run.
 
@@ -196,7 +255,7 @@ Type these in the terminal where the bot is running:
 
 | Command | What it does |
 |---|---|
-| `/restart` | Restarts the bot, reloading the code and prompts. It only starts again by itself if you launched it with `start.bat` |
+| `/restart` | Restarts the bot, reloading the code and prompts. It only starts again by itself if you launched it with `start.bat`. In Docker, use Restart in the web UI or `docker compose restart` |
 
 ### Running tests
 

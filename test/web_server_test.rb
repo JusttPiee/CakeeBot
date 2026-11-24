@@ -5,6 +5,7 @@ class WebServerTest < Minitest::Test
   def teardown
     ENV.delete("WEB_UI_PORT")
     ENV.delete("WEB_UI")
+    ENV.delete("WEB_UI_HOST")
   end
 
   def test_port_comes_from_env_when_it_is_a_usable_port
@@ -15,6 +16,16 @@ class WebServerTest < Minitest::Test
     assert_equal 4567, web_ui_port
     ENV["WEB_UI_PORT"] = "abc"
     assert_equal 4567, web_ui_port
+  end
+
+  def test_host_is_local_unless_set_to_all_addresses
+    assert_equal "127.0.0.1", web_ui_host
+    ["", "banana"].each do |value|
+      ENV["WEB_UI_HOST"] = value
+      assert_equal "127.0.0.1", web_ui_host
+    end
+    ENV["WEB_UI_HOST"] = "0.0.0.0"
+    assert_equal "0.0.0.0", web_ui_host
   end
 
   def test_can_be_switched_off

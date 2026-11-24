@@ -38,3 +38,6 @@ web/dist/
 
 # Node speaker (music/)
 music/node_modules/
+
+# The data folder of the Docker container
+/data/
